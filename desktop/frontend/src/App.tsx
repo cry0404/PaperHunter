@@ -1,8 +1,8 @@
 import './styles/globals.css';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import TitleBar from './components/TitleBar';
 import Layout, { ViewType } from './components/Layout';
-import LogsView from './components/LogsView';
+import LogViewer from './components/LogViewer';
 import SearchView from './components/SearchView';
 import PapersView from './components/PapersView';
 import LibraryView from './components/LibraryView';
@@ -13,6 +13,7 @@ import AboutView from './components/AboutView';
 import RecommendView from './components/RecommendView';
 import { Toaster } from './components/ui/toaster';
 import { CrawlProvider } from './context/CrawlContext';
+import { RecommendProvider } from './context/RecommendContext';
 
 function App() {
     const [currentView, setCurrentView] = useState<ViewType>('recommend');
@@ -58,7 +59,7 @@ function App() {
             case 'recommend':
                 return <RecommendView />;
             case 'logs':
-                return <LogsView />;
+                return <LogViewer />;
             case 'search':
                 return <SearchView />;
             case 'papers':
@@ -80,11 +81,13 @@ function App() {
 
     return (
         <CrawlProvider>
-            <TitleBar />
-            <Layout onViewChange={setCurrentView}>
-                {renderView()}
-            </Layout>
-            <Toaster />
+            <RecommendProvider>
+                <TitleBar />
+                <Layout onViewChange={setCurrentView}>
+                    {renderView()}
+                </Layout>
+                <Toaster />
+            </RecommendProvider>
         </CrawlProvider>
     );
 }

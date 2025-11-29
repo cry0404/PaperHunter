@@ -11,6 +11,7 @@ import (
 	"PaperHunter/pkg/logger"
 
 	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/schema"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -43,11 +44,91 @@ type RecommendResult struct {
 	AgentLogs        []AgentLogEntry       `json:"agentLogs"` // Agent 交互日志
 }
 
+// UserIntent 用户意图分析结果
+type UserIntent struct {
+	OpenReviewVenueID string `json:"openreview_venue_id"`
+	ArxivQuery        string `json:"arxiv_query"`
+	OriginalQuery     string `json:"original_query"`
+	GeneratedTitle    string `json:"generated_title"`
+	GeneratedAbstract string `json:"generated_abstract"`
+}
+
 // logAndEmit 辅助函数：记录日志并发送事件
 func (a *App) logAndEmit(log AgentLogEntry) {
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "agent-log", log)
 	}
+}
+
+// analyzeUserIntent 使用 LLM 分析用户意图并生成优化后的搜索参数
+func (a *App) analyzeUserIntent(userQuery string) (*UserIntent, error) {
+	chatModel := NewChatModel()
+	if chatModel == nil {
+		return nil, fmt.Errorf("failed to create chat model")
+	}
+
+	// Prompt 设计
+	prompt := fmt.Sprintf(`
+User Query: "%s"
+Current Date: %s
+
+Your task is to analyze the user's query and extract/infer specific search parameters for academic paper platforms. This is the "Hype Layer" to optimize the search.
+
+1. **OpenReview Venue ID**: If the user mentions a specific conference (e.g., NeurIPS, ICLR, ICML) or just wants "latest papers" or "agent papers", infer the most relevant Venue ID.
+   - **CRITICAL**: OpenReview REQUIRES a specific venue_id to work (it cannot search by keyword alone).
+   - If the user specifies a conference (e.g. "NeurIPS 2024"), use its ID (e.g. "NeurIPS.cc/2024/Conference").
+   - If the user DOES NOT specify a conference but wants recent papers, infer the most recent major AI conference relative to the current date. (e.g. if today is 2025-11, ICLR 2026 might be under review, NeurIPS 2025 might be recent. Use your knowledge cut-off or best guess).
+   - Common IDs: "NeurIPS.cc/2024/Conference", "ICLR.cc/2025/Conference", "ICML.cc/2024/Conference", "ACL/2024/Conference".
+   - If you are completely unsure, default to a recent major conference like "NeurIPS.cc/2024/Conference" to ensure results.
+
+2. **arXiv Query**: Construct a specific search query for arXiv to get better results than a simple keyword match.
+   - Use boolean operators (AND, OR) and field prefixes (ti:, abs:, cat:).
+   - E.g., for "agent", use "ti:agent OR abs:agent".
+   - E.g., for "LLM", use "(ti:LLM OR abs:LLM OR ti:Large Language Model) AND (cat:cs.CL OR cat:cs.AI)".
+   - If the query is simple, expand it with synonyms.
+
+3. **Hypothetical Paper**: Generate a title and abstract for a hypothetical "ideal" paper that perfectly matches the user's query. This will be used for semantic similarity search.
+   - **Title**: A representative academic title.
+   - **Abstract**: A detailed abstract (3-5 sentences) covering the core concepts, methodology, and expected contributions related to the query.
+
+Return a JSON object ONLY, with no markdown formatting:
+{
+  "openreview_venue_id": "string", 
+  "arxiv_query": "string",
+  "generated_title": "string",
+  "generated_abstract": "string"
+}
+`, userQuery, time.Now().Format("2006-01-02"))
+
+	// 调用 LLM
+	ctx := context.Background()
+	msg, err := chatModel.Generate(ctx, []*schema.Message{
+		{Role: schema.User, Content: prompt},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	content := ""
+	if msg != nil {
+		content = fmt.Sprintf("%v", msg.Content)
+	}
+
+	// 解析 JSON
+	// 处理可能包含 Markdown 代码块的情况
+	content = strings.TrimSpace(content)
+	content = strings.TrimPrefix(content, "```json")
+	content = strings.TrimPrefix(content, "```")
+	content = strings.TrimSuffix(content, "```")
+
+	var intent UserIntent
+	if err := json.Unmarshal([]byte(content), &intent); err != nil {
+		logger.Warn("Failed to parse intent JSON: %v. Raw content: %s", err, content)
+		// 如果解析失败，返回空意图，让后续逻辑处理
+		return &UserIntent{OriginalQuery: userQuery}, nil
+	}
+	intent.OriginalQuery = userQuery
+	return &intent, nil
 }
 
 // GetDailyRecommendations 获取每日推荐（通过 agent 调用，收集 LLM 日志）
@@ -61,6 +142,48 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 	}
 
 	ctx := context.Background()
+
+	// 初始化日志
+	agentLogs := make([]AgentLogEntry, 0)
+
+	// Hype Layer: 分析用户意图
+	var intent *UserIntent
+	if opts.InterestQuery != "" {
+		logger.Info("正在分析用户意图 (Hype Layer)...")
+
+		// 记录正在分析的日志
+		analyzingLog := AgentLogEntry{
+			Type:      "assistant",
+			Content:   "正在分析您的查询意图并优化搜索参数...",
+			Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+		}
+		agentLogs = append(agentLogs, analyzingLog)
+		a.logAndEmit(analyzingLog)
+
+		var err error
+		intent, err = a.analyzeUserIntent(opts.InterestQuery)
+		if err != nil {
+			logger.Warn("意图分析失败: %v", err)
+			// 记录错误但继续执行
+			errLog := AgentLogEntry{
+				Type:      "assistant",
+				Content:   fmt.Sprintf("意图分析遇到问题 (%v)，将使用原始查询。", err),
+				Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+			}
+			agentLogs = append(agentLogs, errLog)
+			a.logAndEmit(errLog)
+		} else {
+			logger.Info("意图分析完成: OpenReview=%s, Arxiv=%s", intent.OpenReviewVenueID, intent.ArxivQuery)
+			// 记录分析结果
+			resultLog := AgentLogEntry{
+				Type:      "assistant",
+				Content:   fmt.Sprintf("✅ 意图分析完成 (Hype Layer)\n• 优化后的 arXiv 查询: `%s`\n• 推断的 OpenReview 会议: `%s`\n• 生成的虚拟论文标题: `%s`", intent.ArxivQuery, intent.OpenReviewVenueID, intent.GeneratedTitle),
+				Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+			}
+			agentLogs = append(agentLogs, resultLog)
+			a.logAndEmit(resultLog)
+		}
+	}
 
 	// 构建工具调用参数
 	toolParams := map[string]interface{}{
@@ -88,6 +211,22 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 		toolParams["date_to"] = opts.DateTo
 	}
 
+	// 注入 Hype Layer 的结果
+	if intent != nil {
+		if intent.OpenReviewVenueID != "" {
+			toolParams["openreview_venue_id"] = intent.OpenReviewVenueID
+		}
+		if intent.ArxivQuery != "" {
+			toolParams["arxiv_query"] = intent.ArxivQuery
+		}
+		if intent.GeneratedTitle != "" {
+			toolParams["example_title"] = intent.GeneratedTitle
+		}
+		if intent.GeneratedAbstract != "" {
+			toolParams["example_abstract"] = intent.GeneratedAbstract
+		}
+	}
+
 	// 使用 Runner 调用 agent，收集日志
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{
 		Agent: a.agent,
@@ -99,6 +238,7 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 		// 用户提供了兴趣关键词
 		query = fmt.Sprintf(`用户感兴趣的主题：%s
 请使用 zotero_recommend 工具（action: daily_recommend）获取每日推荐。
+我已为你准备好了优化后的参数（见下），请直接使用这些参数调用工具。
 参数：%s`, opts.InterestQuery, formatToolParams(toolParams))
 	} else {
 		// 用户没有提供关键词，基于 Zotero 推荐
@@ -106,7 +246,6 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 参数：%s`, formatToolParams(toolParams))
 	}
 
-	agentLogs := make([]AgentLogEntry, 0)
 	initialLog := AgentLogEntry{
 		Type:      "user",
 		Content:   query,
@@ -115,7 +254,7 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 	agentLogs = append(agentLogs, initialLog)
 	a.logAndEmit(initialLog)
 
-	// 调用 agent, 开始基于 query 查询，这里可以引入 Hype 部分来对于用户的询问作优化
+	// 调用 agent
 	logger.Info("开始调用 agent，查询: %s", query)
 	iter := runner.Query(ctx, query)
 	var finalOutput *ZoteroRecommendOutput
@@ -316,6 +455,15 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 										}
 										if maxRec, ok := argsMap["max_recommendations"]; ok {
 											parts = append(parts, fmt.Sprintf("最大推荐数: %v", maxRec))
+										}
+										if venueID, ok := argsMap["openreview_venue_id"].(string); ok && venueID != "" {
+											parts = append(parts, fmt.Sprintf("OpenReview会议: %s", venueID))
+										}
+										if arxivQ, ok := argsMap["arxiv_query"].(string); ok && arxivQ != "" {
+											parts = append(parts, fmt.Sprintf("arXiv查询: %s", arxivQ))
+										}
+										if exampleTitle, ok := argsMap["example_title"].(string); ok && exampleTitle != "" {
+											parts = append(parts, fmt.Sprintf("生成标题: %s", exampleTitle))
 										}
 										argsStr = strings.Join(parts, ", ")
 									}
@@ -551,7 +699,7 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 			a.logAndEmit(fallbackLog)
 		}
 		// 回退到直接调用工具逻辑
-		return a.getDailyRecommendationsDirect(opts, agentLogs)
+		return a.getDailyRecommendationsDirect(opts, agentLogs, intent)
 	}
 
 	logger.Info("Agent 调用成功，收集到 %d 条日志", len(agentLogs))
@@ -589,7 +737,7 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 }
 
 // getDailyRecommendationsDirect 直接调用工具逻辑（回退方案）
-func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []AgentLogEntry) (string, error) {
+func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []AgentLogEntry, intent *UserIntent) (string, error) {
 	// 转换 RecommendOptions 为内部使用的参数
 	topK := opts.TopK
 	if topK <= 0 {
@@ -627,7 +775,16 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 	// 如果需要爬取（未爬取或强制爬取）
 	if !alreadyCrawled || opts.ForceCrawl {
 		logger.Info("开始爬取论文（日期范围: %s 至 %s）...", dateFrom, dateTo)
-		crawlCount, err := crawlPapers(ctx, a, opts.Platforms, dateFrom, dateTo)
+
+		// 使用 Hype Layer 的参数（如果可用）
+		openreviewVenueID := ""
+		arxivQuery := ""
+		if intent != nil {
+			openreviewVenueID = intent.OpenReviewVenueID
+			arxivQuery = intent.ArxivQuery
+		}
+
+		crawlCount, err := crawlPapers(ctx, a, opts.Platforms, dateFrom, dateTo, openreviewVenueID, arxivQuery)
 		if err != nil {
 			// 爬取失败不影响继续执行
 		} else {
@@ -641,49 +798,45 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 		}
 	}
 
-	// 从 Zotero 获取论文
+	// 收集推荐种子
+	var seeds []*models.Paper
+
+	// 1. 从 Zotero 获取论文
 	zoteroPapers, err := getZoteroPapers(opts.ZoteroCollection, 50)
 	if err != nil {
-		// 记录错误到日志
-		errLog := AgentLogEntry{
-			Type:      "error",
-			Content:   fmt.Sprintf("从 Zotero 获取论文失败: %v", err),
-			Timestamp: time.Now().Format("2006-01-02 15:04:05"),
-		}
-		agentLogs = append(agentLogs, errLog)
-		a.logAndEmit(errLog)
-		// 返回错误结果，但包含日志（不返回 error，而是返回 JSON）
-		recommendResult := RecommendResult{
-			CrawledToday:     output.CrawledToday,
-			CrawlCount:       output.CrawlCount,
-			ZoteroPaperCount: 0,
-			Recommendations:  make([]RecommendationGroup, 0),
-			Message:          fmt.Sprintf("从 Zotero 获取论文失败: %v", err),
-			AgentLogs:        agentLogs,
-		}
-		data, marshalErr := json.Marshal(recommendResult)
-		if marshalErr != nil {
-			return "", fmt.Errorf("marshal error result failed: %w", marshalErr)
-		}
-		return string(data), nil
+		// 记录错误但不中断，继续尝试其他来源
+		logger.Warn("从 Zotero 获取论文失败: %v", err)
+	} else {
+		seeds = append(seeds, zoteroPapers...)
+		output.ZoteroPaperCount = len(zoteroPapers)
 	}
 
-	if len(zoteroPapers) == 0 {
+	// 2. 添加 Hype Layer 生成的示例论文
+	if intent != nil && intent.GeneratedTitle != "" && intent.GeneratedAbstract != "" {
+		seeds = append(seeds, &models.Paper{
+			Title:    intent.GeneratedTitle,
+			Abstract: intent.GeneratedAbstract,
+			Source:   "user_query",
+			SourceID: "hype_generated",
+		})
+	}
+
+	if len(seeds) == 0 {
 		// 记录警告到日志
 		warnLog := AgentLogEntry{
 			Type:      "error",
-			Content:   "Zotero 中没有找到论文，请先在 Zotero 中添加一些论文",
+			Content:   "未找到种子论文（Zotero 为空且未生成示例）",
 			Timestamp: time.Now().Format("2006-01-02 15:04:05"),
 		}
 		agentLogs = append(agentLogs, warnLog)
 		a.logAndEmit(warnLog)
-		// 返回空结果，但包含日志（不返回 error，而是返回 JSON）
+
 		recommendResult := RecommendResult{
 			CrawledToday:     output.CrawledToday,
 			CrawlCount:       output.CrawlCount,
 			ZoteroPaperCount: 0,
 			Recommendations:  make([]RecommendationGroup, 0),
-			Message:          "Zotero 中没有找到论文，请先在 Zotero 中添加一些论文",
+			Message:          "未找到种子论文",
 			AgentLogs:        agentLogs,
 		}
 		data, marshalErr := json.Marshal(recommendResult)
@@ -692,8 +845,6 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 		}
 		return string(data), nil
 	}
-
-	output.ZoteroPaperCount = len(zoteroPapers)
 
 	// 解析日期范围用于搜索
 	var fromDate, toDate *time.Time
@@ -710,11 +861,11 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 		}
 	}
 
-	// 为每篇 Zotero 论文搜索相似的新论文
+	// 为每篇种子论文搜索相似的新论文
 	allRecommendedPapers := make(map[string]*models.SimilarPaper)
 
-	for _, zoteroPaper := range zoteroPapers {
-		similarPapers, err := searchSimilarPapers(ctx, a, zoteroPaper, topK, fromDate, toDate)
+	for _, seedPaper := range seeds {
+		similarPapers, err := searchSimilarPapers(ctx, a, seedPaper, topK, fromDate, toDate)
 		if err != nil {
 			continue
 		}
@@ -725,8 +876,8 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 			key := fmt.Sprintf("%s:%s", sp.Paper.Source, sp.Paper.SourceID)
 			if _, exists := allRecommendedPapers[key]; !exists {
 				isDuplicate := false
-				for _, zp := range zoteroPapers {
-					if zp.Source == sp.Paper.Source && zp.SourceID == sp.Paper.SourceID {
+				for _, s := range seeds {
+					if s.Source == sp.Paper.Source && s.SourceID == sp.Paper.SourceID {
 						isDuplicate = true
 						break
 					}
@@ -740,7 +891,7 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 
 		if len(filteredPapers) > 0 {
 			output.Recommendations = append(output.Recommendations, RecommendationGroup{
-				ZoteroPaper: *zoteroPaper,
+				ZoteroPaper: *seedPaper,
 				Papers:      filteredPapers,
 			})
 		}
@@ -771,21 +922,21 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 	if totalRecommended == 0 {
 		notFoundLog := AgentLogEntry{
 			Type:      "assistant",
-			Content:   fmt.Sprintf("未找到匹配的推荐论文。已搜索 %d 篇 Zotero 论文，但未找到相似的新论文。", len(zoteroPapers)),
+			Content:   fmt.Sprintf("未找到匹配的推荐论文。已搜索 %d 篇种子论文，但未找到相似的新论文。", len(seeds)),
 			Timestamp: time.Now().Format("2006-01-02 15:04:05"),
 		}
 		agentLogs = append(agentLogs, notFoundLog)
 		a.logAndEmit(notFoundLog)
-		output.Message = fmt.Sprintf("未找到匹配的推荐论文，基于 %d 篇 Zotero 论文", len(zoteroPapers))
+		output.Message = fmt.Sprintf("未找到匹配的推荐论文，基于 %d 篇种子论文", len(seeds))
 	} else {
 		successLog := AgentLogEntry{
 			Type:      "assistant",
-			Content:   fmt.Sprintf("成功推荐 %d 篇论文，基于 %d 篇 Zotero 论文", totalRecommended, len(zoteroPapers)),
+			Content:   fmt.Sprintf("成功推荐 %d 篇论文，基于 %d 篇种子论文", totalRecommended, len(seeds)),
 			Timestamp: time.Now().Format("2006-01-02 15:04:05"),
 		}
 		agentLogs = append(agentLogs, successLog)
 		a.logAndEmit(successLog)
-		output.Message = fmt.Sprintf("成功推荐 %d 篇论文，基于 %d 篇 Zotero 论文", totalRecommended, len(zoteroPapers))
+		output.Message = fmt.Sprintf("成功推荐 %d 篇论文，基于 %d 篇种子论文", totalRecommended, len(seeds))
 	}
 
 	// 确保日志不为空（至少包含用户查询）

@@ -6,6 +6,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +17,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
-import { RefreshCw, Trash2, Activity } from "lucide-react";
+import { Trash2, Activity, MessageSquare, Terminal, User, Bot, Wrench, AlertTriangle } from "lucide-react";
+import { useRecommendContext, AgentLogEntry } from "../context/RecommendContext";
+
+// --- System Log Types & Component ---
 
 interface LogEntry {
   timestamp: string;
@@ -27,23 +31,20 @@ interface LogEntry {
 
 type FilterLevel = 'ALL' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 
-const LogViewer: React.FC = () => {
+const SystemLogsView: React.FC<{
+  onClear: () => void;
+}> = ({ onClear }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [filterLevel, setFilterLevel] = useState<FilterLevel>('ALL');
   const [currentLogLevel, setCurrentLogLevel] = useState('INFO');
-  const [showClearDialog, setShowClearDialog] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
+  
   const parseLogLine = (line: string): LogEntry | null => {
     if (!line.trim()) return null;
-    
     const regex = /^(\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(DEBUG|INFO|WARN|ERROR)\] (.+)$/;
     const match = line.match(regex);
-    
     if (match) {
       return {
         timestamp: match[1],
@@ -52,20 +53,17 @@ const LogViewer: React.FC = () => {
         raw: line
       };
     }
-    
     return null;
   };
 
   const loadLogs = async () => {
     try {
-      setLoading(true);
       const content = await GetLogs();
       const lines = content.split('\n');
       const parsedLogs = lines
         .map(parseLogLine)
         .filter((log): log is LogEntry => log !== null);
       
-      // 只有在日志内容真的变化时才更新
       setLogs(prevLogs => {
         if (JSON.stringify(prevLogs) !== JSON.stringify(parsedLogs)) {
           return parsedLogs;
@@ -74,39 +72,13 @@ const LogViewer: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to load logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClearLogs = async () => {
-    try {
-      await ClearLogs();
-      setLogs([]);
-      setShowClearDialog(false);
-    } catch (error) {
-      console.error('Failed to clear logs:', error);
-    }
-  };
-
-  const handleSetLogLevel = async (level: string) => {
-    try {
-      await SetLogLevel(level);
-      setCurrentLogLevel(level);
-    } catch (error) {
-      console.error('Failed to set log level:', error);
     }
   };
 
   useEffect(() => {
     loadLogs(); 
-
     if (!autoRefresh) return;
-
-    const timer = setInterval(() => {
-      loadLogs();
-    }, 2000);
-
+    const timer = setInterval(loadLogs, 2000);
     return () => clearInterval(timer);
   }, [autoRefresh]);
 
@@ -116,7 +88,6 @@ const LogViewer: React.FC = () => {
     }
   }, [logs, autoScroll]);
 
-  // 使用 useMemo 优化过滤逻辑
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
       if (filterLevel === 'ALL') return true;
@@ -124,89 +95,36 @@ const LogViewer: React.FC = () => {
     });
   }, [logs, filterLevel]);
 
-  const getLevelBadgeVariant = (level: string): "default" | "secondary" | "destructive" | "outline" => {
-    switch (level) {
-      case 'ERROR':
-        return 'destructive';
-      case 'WARN':
-        return 'outline';
-      case 'INFO':
-        return 'default';
-      case 'DEBUG':
-        return 'secondary';
-      default:
-        return 'default';
-    }
+  const handleSetLogLevel = async (level: string) => {
+      try {
+        await SetLogLevel(level);
+        setCurrentLogLevel(level);
+      } catch (error) {
+        console.error('Failed to set log level:', error);
+      }
   };
 
-  // 使用 useMemo 优化日志行渲染
-  const logItems = useMemo(() => {
-    return filteredLogs.map((log, index) => (
-      <div
-        key={`${log.timestamp}-${index}`}
-        className="py-1.5 px-3 rounded hover:bg-accent/50 transition-colors"
-      >
-        <div className="flex items-start gap-3">
-          <span className="text-muted-foreground text-xs whitespace-nowrap mt-0.5 font-mono">
-            {log.timestamp}
-          </span>
-          <Badge variant={getLevelBadgeVariant(log.level)} className="mt-0.5">
-            {log.level}
-          </Badge>
-          <span className="flex-1 break-all text-sm">
-            {log.message}
-          </span>
-        </div>
-      </div>
-    ));
-  }, [filteredLogs]);
+  const getLevelBadgeVariant = (level: string): "default" | "secondary" | "destructive" | "outline" => {
+      switch (level) {
+        case 'ERROR': return 'destructive';
+        case 'WARN': return 'outline';
+        case 'INFO': return 'default';
+        case 'DEBUG': return 'secondary';
+        default: return 'default';
+      }
+  };
 
   return (
-    <>
-      <div className="flex flex-col h-full overflow-hidden animate-fade-in">
-        <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-          <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-3xl font-display font-bold gradient-text">Activity Logs</CardTitle>
-                </div>
-                <CardDescription className="text-base text-muted-foreground ml-13">
-                  实时查看应用日志和系统活动
-                </CardDescription>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setShowClearDialog(true)}
-                  size="sm"
-                  variant="destructive"
-                  className="hover-lift"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6 mt-6 flex-wrap">
+    <div className="flex flex-col h-full overflow-hidden">
+       <div className="border-b border-border/30 px-6 py-3 bg-card/30 backdrop-blur-sm flex-shrink-0">
+          <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-                  <Checkbox
-                    checked={autoRefresh}
-                    onCheckedChange={(checked: boolean) => setAutoRefresh(checked)}
-                  />
-                  <span>自动刷新(2s)</span>
+                  <Checkbox checked={autoRefresh} onCheckedChange={(c:boolean) => setAutoRefresh(c)} />
+                  <span>自动刷新</span>
                 </label>
-
                 <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-                  <Checkbox
-                    checked={autoScroll}
-                    onCheckedChange={(checked: boolean) => setAutoScroll(checked)}
-                  />
+                  <Checkbox checked={autoScroll} onCheckedChange={(c:boolean) => setAutoScroll(c)} />
                   <span>自动滚动</span>
                 </label>
               </div>
@@ -215,7 +133,7 @@ const LogViewer: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Log Level:</span>
                   <Select value={currentLogLevel} onValueChange={handleSetLogLevel}>
-                    <SelectTrigger className="w-[120px] hover-lift">
+                    <SelectTrigger className="w-[100px] h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -229,8 +147,8 @@ const LogViewer: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Filter:</span>
-                  <Select value={filterLevel} onValueChange={(value: string) => setFilterLevel(value as FilterLevel)}>
-                    <SelectTrigger className="w-[120px] hover-lift">
+                  <Select value={filterLevel} onValueChange={(v) => setFilterLevel(v as FilterLevel)}>
+                    <SelectTrigger className="w-[100px] h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -243,64 +161,228 @@ const LogViewer: React.FC = () => {
                   </Select>
                 </div>
               </div>
+          </div>
+       </div>
+
+       <div className="flex-1 overflow-hidden bg-background/50">
+          <ScrollArea className="h-full">
+            <div className="p-6 space-y-1">
+              {filteredLogs.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>暂无系统日志</p>
+                </div>
+              ) : (
+                filteredLogs.map((log, index) => (
+                  <div key={`${log.timestamp}-${index}`} className="py-1 px-3 rounded hover:bg-accent/50 transition-colors text-sm font-mono">
+                    <div className="flex items-start gap-3">
+                      <span className="text-muted-foreground text-xs whitespace-nowrap mt-0.5 opacity-70">
+                        {log.timestamp}
+                      </span>
+                      <Badge variant={getLevelBadgeVariant(log.level)} className="mt-0.5 h-5 px-1 text-[10px]">
+                        {log.level}
+                      </Badge>
+                      <span className="flex-1 break-all whitespace-pre-wrap">
+                        {log.message}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={logEndRef} />
+            </div>
+          </ScrollArea>
+       </div>
+       
+       <div className="border-t border-border/30 px-6 py-2 bg-card/30 text-xs text-muted-foreground flex justify-between items-center">
+          <span>Total: {filteredLogs.length} logs</span>
+          {autoRefresh && <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/> Live</span>}
+       </div>
+    </div>
+  );
+};
+
+// --- Agent Log Component ---
+
+const AgentLogsView: React.FC = () => {
+  const { agentLogs } = useRecommendContext();
+  const [autoScroll, setAutoScroll] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (autoScroll && scrollRef.current) {
+        const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollElement) {
+            scrollElement.scrollTop = scrollElement.scrollHeight;
+        }
+    }
+  }, [agentLogs, autoScroll]);
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'user': return <User className="w-4 h-4" />;
+      case 'assistant': return <Bot className="w-4 h-4" />;
+      case 'tool_call': return <Wrench className="w-4 h-4" />;
+      case 'tool_result': return <Terminal className="w-4 h-4" />;
+      case 'error': return <AlertTriangle className="w-4 h-4" />;
+      default: return <MessageSquare className="w-4 h-4" />;
+    }
+  };
+
+  const getStyle = (type: string) => {
+    switch (type) {
+      case 'user': return 'bg-primary/5 border-primary/20';
+      case 'assistant': return 'bg-secondary/30 border-secondary';
+      case 'tool_call': return 'bg-blue-500/5 border-blue-500/20';
+      case 'tool_result': return 'bg-slate-500/5 border-slate-500/20 font-mono text-xs';
+      case 'error': return 'bg-destructive/10 border-destructive/30 text-destructive';
+      default: return 'bg-muted/30 border-border';
+    }
+  };
+
+  const getLabel = (type: string) => {
+      switch (type) {
+          case 'user': return 'User';
+          case 'assistant': return 'Assistant';
+          case 'tool_call': return 'Tool Call';
+          case 'tool_result': return 'Tool Result';
+          case 'error': return 'Error';
+          default: return type;
+      }
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="border-b border-border/30 px-6 py-3 bg-card/30 backdrop-blur-sm flex-shrink-0 flex justify-between items-center">
+         <div className="flex items-center gap-2">
+            <Badge variant="outline" className="h-6">
+                {agentLogs.length} Entries
+            </Badge>
+         </div>
+         <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+            <Checkbox checked={autoScroll} onCheckedChange={(c:boolean) => setAutoScroll(c)} />
+            <span>自动滚动</span>
+         </label>
+      </div>
+
+      <div className="flex-1 overflow-hidden bg-background/50">
+         <ScrollArea className="h-full" ref={scrollRef}>
+            <div className="p-6 space-y-4 max-w-4xl mx-auto">
+               {agentLogs.length === 0 ? (
+                 <div className="text-center py-12 text-muted-foreground">
+                   <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                   <p>暂无 Agent 交互记录</p>
+                   <p className="text-xs mt-1">开始推荐任务后这里将显示详细的推理过程</p>
+                 </div>
+               ) : (
+                 agentLogs.map((log, index) => (
+                    <div key={index} className={`rounded-lg border p-4 ${getStyle(log.type)}`}>
+                       <div className="flex items-center justify-between mb-2 border-b border-black/5 dark:border-white/5 pb-2">
+                          <div className="flex items-center gap-2 font-semibold text-sm">
+                             {getIcon(log.type)}
+                             <span>{getLabel(log.type)}</span>
+                          </div>
+                          <span className="text-xs opacity-50 font-mono">{log.timestamp}</span>
+                       </div>
+                       <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                          {log.content}
+                       </div>
+                    </div>
+                 ))
+               )}
+            </div>
+         </ScrollArea>
+      </div>
+    </div>
+  );
+};
+
+
+// --- Main LogViewer Component ---
+
+const LogViewer: React.FC = () => {
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('system');
+  
+  const handleClearLogs = async () => {
+    try {
+      await ClearLogs();
+      setShowClearDialog(false);
+      // Force refresh logic would be inside SystemLogsView, but ClearLogs clears the file
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+        <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
+          <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                    <CardTitle className="text-2xl font-display font-bold">Logs & Activity</CardTitle>
+                    <CardDescription>查看系统运行日志和 Agent 交互详情</CardDescription>
+                </div>
+              </div>
+              
+              {activeTab === 'system' && (
+                <Button
+                  onClick={() => setShowClearDialog(true)}
+                  size="sm"
+                  variant="destructive"
+                  className="hover-lift"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear System Logs
+                </Button>
+              )}
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 p-0 overflow-hidden bg-background/50">
-            <ScrollArea className="h-full" ref={scrollAreaRef}>
-              <div className="p-6">
-                {filteredLogs.length === 0 ? (
-                  <div className="glass-card p-12 rounded-2xl text-center">
-                    <div className="max-w-md mx-auto space-y-4">
-                      <div className="w-20 h-20 rounded-2xl gradient-primary/10 flex items-center justify-center mx-auto">
-                        <Activity className="w-10 h-10 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-display font-semibold">No Logs Available</h3>
-                      <p className="text-muted-foreground">
-                        Logs will appear here when the application starts
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {logItems}
-                    <div ref={logEndRef} />
-                  </>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-
-          <div className="border-t border-border/30 px-8 py-4 bg-card/30 backdrop-blur-sm flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  Total: <span className="font-semibold text-foreground">{filteredLogs.length}</span> logs
-                </span>
-                {filterLevel !== 'ALL' && (
-                  <Badge variant="outline" className="text-xs">
-                    Filter: {filterLevel}
-                  </Badge>
-                )}
-              </div>
-              {autoRefresh && (
-                <div className="flex items-center gap-2 text-xs text-success">
-                  <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                  <span>Auto-refreshing</span>
+          <CardContent className="flex-1 p-0 overflow-hidden">
+             <Tabs defaultValue="system" value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+                <div className="px-8 pt-2 bg-card/30 border-b border-border/30">
+                    <TabsList className="bg-transparent p-0 h-auto gap-6 justify-start rounded-none">
+                        <TabsTrigger 
+                            value="system"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2"
+                        >
+                            <Terminal className="w-4 h-4 mr-2" />
+                            System Logs
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="agent"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2"
+                        >
+                            <Bot className="w-4 h-4 mr-2" />
+                            Agent Interaction
+                        </TabsTrigger>
+                    </TabsList>
                 </div>
-              )}
-            </div>
-          </div>
+                
+                <TabsContent value="system" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <SystemLogsView onClear={() => {}} />
+                </TabsContent>
+                
+                <TabsContent value="agent" className="flex-1 m-0 overflow-hidden data-[state=inactive]:hidden">
+                    <AgentLogsView />
+                </TabsContent>
+             </Tabs>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Clear Confirmation Dialog */}
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear all logs?</AlertDialogTitle>
+            <AlertDialogTitle>Clear system logs?</AlertDialogTitle>
             <AlertDialogDescription>
-              这将会导致当前的所有日志丢失
+              这将永久清空当前的系统日志文件。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
