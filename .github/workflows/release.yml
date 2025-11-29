@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [amd64, arm64]
+        arch: [arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -75,36 +75,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.23'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-
-      - name: Build
-        working-directory: desktop
-        run: wails build -platform linux/amd64
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: desktop/build/bin/PaperHunter
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ 
