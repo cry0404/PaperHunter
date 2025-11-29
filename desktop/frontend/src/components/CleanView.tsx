@@ -5,7 +5,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Separator } from './ui/separator';
 import { useToast } from './ui/use-toast';
 import { Eraser, Trash2, FileOutput, Calendar, Database, Filter } from 'lucide-react';
 import { CleanWithOptions } from '../../wailsjs/go/main/App';

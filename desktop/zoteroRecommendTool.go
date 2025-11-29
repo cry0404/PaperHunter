@@ -87,18 +87,6 @@ func markTodayCrawled() error {
 	return os.WriteFile(statusFile, []byte(time.Now().Format(time.RFC3339)), 0644)
 }
 
-// isWeekend 检查日期是否为周末
-func isWeekend(t time.Time) bool {
-	weekday := t.Weekday()
-	return weekday == time.Saturday || weekday == time.Sunday
-}
-
-// isHoliday 检查日期是否为节假日（简单实现，可根据需要扩展）
-func isHoliday(t time.Time) bool {
-	// 这里可以添加更多节假日判断逻辑
-	// 目前只检查周末，可以根据需要添加其他节假日
-	return isWeekend(t)
-}
 
 // crawlTodayNewSubmissions 爬取今日 arXiv New Submissions 页面的论文
 // 使用 https://arxiv.org/list/cs/new 获取今日公布的 CS 领域论文

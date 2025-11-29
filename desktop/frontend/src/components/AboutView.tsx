@@ -25,7 +25,7 @@ const AboutView: React.FC = () => {
                   <Logo size={32} className="text-primary" />
                 </div>
                 <div>
-                  <div className="text-2xl font-display font-bold">QuickSearchPaper</div>
+                  <div className="text-2xl font-display font-bold">PaperHunter</div>
                   <div className="text-sm text-muted-foreground">多平台学术论文爬取与本地语义检索工具</div>
                 </div>
               </div>
