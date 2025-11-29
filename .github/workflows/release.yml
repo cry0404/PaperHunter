@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: #push 的情况带 v 开头的 tag 就触发该流程
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: darwin
+            arch: amd64
+            suffix: "-mac-amd64"
+          - os: darwin
+            arch: arm64
+            suffix: "-mac-arm64"
+          - os: linux
+            arch: amd64
+            suffix: "-linux-amd64"
+          - os: windows
+            arch: amd64
+            suffix: "-windows-amd64.exe"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.0'
+
+      - name: Build
+        run: |
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -ldflags="-s -w" -o quicksearch-paper${{ matrix.suffix }} ./cmd/quicksearch
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: quicksearch-paper${{ matrix.suffix }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

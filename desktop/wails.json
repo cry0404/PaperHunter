@@ -1,0 +1,26 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "QuickSearchPaper",
+  "outputfilename": "QuickSearchPaper",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "cry0404",
+    "email": "1527653155@qq.com"
+  },
+  "info": {
+    "productName": "QuickSearchPaper",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2025 cry0404",
+    "comments": "多平台学术论文爬取与语义搜索工具"
+  },
+  "nsisType": "multiple",
+  "obfuscated": false,
+  "wailsjsdir": "./frontend",
+  "assetdir": "./build",
+  "reloaddirs": "",
+  "outputdir": "./build/bin",
+  "appargs": ""
+}

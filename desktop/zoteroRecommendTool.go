@@ -1,0 +1,474 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"PaperHunter/config"
+	"PaperHunter/internal/core"
+	"PaperHunter/internal/models"
+	"PaperHunter/internal/platform"
+	"PaperHunter/pkg/logger"
+	"PaperHunter/pkg/upload/zotero"
+
+	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/components/tool/utils"
+)
+
+// ZoteroRecommendInput 统一的 Zotero 和推荐工具输入参数
+type ZoteroRecommendInput struct {
+	// Action 操作类型：get_collections（获取集合列表）、get_papers（获取论文）、daily_recommend（每日推荐）
+	Action string `json:"action" jsonschema:"required,enum=get_collections,enum=get_papers,enum=daily_recommend,description=Action to perform: get_collections, get_papers, or daily_recommend"`
+
+	// 以下字段用于 get_papers 和 daily_recommend
+	CollectionKey string `json:"collection_key,omitempty" jsonschema:"description=Collection key for get_papers or daily_recommend action"`
+	Limit         int    `json:"limit,omitempty" jsonschema:"description=Limit number of papers to return (for get_papers)"`
+
+	// 以下字段仅用于 daily_recommend
+	Platforms          []string `json:"platforms,omitempty" jsonschema:"description=List of platforms to crawl today's papers (for daily_recommend)"`
+	TopK               int      `json:"top_k,omitempty" jsonschema:"description=Number of recommended papers per Zotero paper (for daily_recommend, default: 5)"`
+	MaxRecommendations int      `json:"max_recommendations,omitempty" jsonschema:"description=Maximum total number of recommended papers (for daily_recommend, default: 20)"`
+	ForceCrawl         bool     `json:"force_crawl,omitempty" jsonschema:"description=Force re-crawl today's papers even if already crawled (for daily_recommend)"`
+	DateFrom           string   `json:"date_from,omitempty" jsonschema:"description=Start date in YYYY-MM-DD format (for daily_recommend, default: today)"`
+	DateTo             string   `json:"date_to,omitempty" jsonschema:"description=End date in YYYY-MM-DD format (for daily_recommend, default: today)"`
+}
+
+// ZoteroRecommendOutput 统一的输出结果
+type ZoteroRecommendOutput struct {
+	Success bool `json:"success" jsonschema:"description=Whether the operation was successful"`
+
+	// 用于 get_collections 和 get_papers
+	Message string      `json:"message,omitempty" jsonschema:"description=Result message"`
+	Data    interface{} `json:"data,omitempty" jsonschema:"description=Result data (collections or papers for get_collections/get_papers)"`
+
+	// 用于 daily_recommend
+	CrawledToday     bool                  `json:"crawled_today,omitempty" jsonschema:"description=Whether papers were crawled today (for daily_recommend)"`
+	CrawlCount       int                   `json:"crawl_count,omitempty" jsonschema:"description=Number of papers crawled today (for daily_recommend)"`
+	ZoteroPaperCount int                   `json:"zotero_paper_count,omitempty" jsonschema:"description=Number of papers retrieved from Zotero (for daily_recommend)"`
+	Recommendations  []RecommendationGroup `json:"recommendations,omitempty" jsonschema:"description=Grouped recommendations based on Zotero papers (for daily_recommend)"`
+}
+
+// RecommendationGroup 基于某个 Zotero 论文的推荐组
+type RecommendationGroup struct {
+	ZoteroPaper models.Paper           `json:"zotero_paper" jsonschema:"description=The Zotero paper this group is based on"`
+	Papers      []*models.SimilarPaper `json:"papers" jsonschema:"description=Recommended papers similar to the Zotero paper"`
+}
+
+// getTodayCrawlStatusFile 获取今日爬取状态文件路径
+func getTodayCrawlStatusFile() string {
+	homeDir, _ := os.UserHomeDir()
+	statusDir := filepath.Join(homeDir, ".quicksearch", "status")
+	os.MkdirAll(statusDir, 0755)
+	today := time.Now().Format("2006-01-02")
+	return filepath.Join(statusDir, fmt.Sprintf("crawl_%s.txt", today))
+}
+
+// checkTodayCrawled 检查今天是否已经爬取过
+func checkTodayCrawled() bool {
+	statusFile := getTodayCrawlStatusFile()
+	_, err := os.Stat(statusFile)
+	return err == nil
+}
+
+// markTodayCrawled 标记今天已爬取
+func markTodayCrawled() error {
+	statusFile := getTodayCrawlStatusFile()
+	return os.WriteFile(statusFile, []byte(time.Now().Format(time.RFC3339)), 0644)
+}
+
+// isWeekend 检查日期是否为周末
+func isWeekend(t time.Time) bool {
+	weekday := t.Weekday()
+	return weekday == time.Saturday || weekday == time.Sunday
+}
+
+// isHoliday 检查日期是否为节假日（简单实现，可根据需要扩展）
+func isHoliday(t time.Time) bool {
+	// 这里可以添加更多节假日判断逻辑
+	// 目前只检查周末，可以根据需要添加其他节假日
+	return isWeekend(t)
+}
+
+// crawlPapers 爬取指定日期范围的论文
+func crawlPapers(ctx context.Context, app *App, platforms []string, dateFrom, dateTo string) (int, error) {
+	if app == nil || app.coreApp == nil {
+		return 0, fmt.Errorf("app instance is not initialized")
+	}
+
+	if len(platforms) == 0 {
+		// 默认平台
+		platforms = []string{"arxiv", "openreview", "acl"}
+	}
+
+	// 如果没有指定日期，默认使用今天
+	if dateFrom == "" {
+		dateFrom = time.Now().Format("2006-01-02")
+	}
+	if dateTo == "" {
+		dateTo = time.Now().Format("2006-01-02")
+	}
+
+	totalCount := 0
+
+	// 解析日期范围
+	fromDate, err := time.Parse("2006-01-02", dateFrom)
+	if err != nil {
+		return 0, fmt.Errorf("invalid date_from format: %w", err)
+	}
+	toDate, err := time.Parse("2006-01-02", dateTo)
+	if err != nil {
+		return 0, fmt.Errorf("invalid date_to format: %w", err)
+	}
+
+	// 遍历日期范围内的每一天
+	currentDate := fromDate
+	for !currentDate.After(toDate) {
+		// 检查是否为周末或节假日（arxiv 等平台在节假日不发刊）
+		if isHoliday(currentDate) {
+			logger.Info("跳过 %s（周末或节假日，arxiv 等平台不发刊）", currentDate.Format("2006-01-02"))
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
+		}
+
+		dateStr := currentDate.Format("2006-01-02")
+		for _, platformName := range platforms {
+			query := platform.Query{
+				DateFrom: dateStr,
+				DateTo:   dateStr,
+				Limit:    1000, // 限制每日爬取数量
+			}
+
+			logger.Info("开始爬取 %s 平台论文 (%s)", platformName, dateStr)
+			count, err := app.coreApp.Crawl(ctx, platformName, query)
+			if err != nil {
+				logger.Warn("爬取 %s 平台失败 (%s): %v", platformName, dateStr, err)
+				continue
+			}
+			totalCount += count
+			logger.Info("%s 平台爬取完成 (%s)，获得 %d 篇论文", platformName, dateStr, count)
+		}
+
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	return totalCount, nil
+}
+
+// getZoteroPapers 从 Zotero 获取论文
+func getZoteroPapers(collectionKey string, limit int) ([]*models.Paper, error) {
+	cfg := config.Get()
+	if cfg.Zotero.UserID == "" || cfg.Zotero.APIKey == "" {
+		return nil, fmt.Errorf("zotero 配置不完整，请在配置文件中设置 zotero.user_id 和 zotero.api_key")
+	}
+
+	client := zotero.NewClient(cfg.Zotero.UserID, cfg.Zotero.APIKey)
+	papers, err := client.GetPapers(collectionKey, limit)
+	if err != nil {
+		return nil, fmt.Errorf("从 Zotero 获取论文失败: %w", err)
+	}
+
+	return papers, nil
+}
+
+// searchSimilarPapers 搜索与给定论文相似的论文
+func searchSimilarPapers(ctx context.Context, app *App, zoteroPaper *models.Paper, topK int, dateFrom, dateTo *time.Time) ([]*models.SimilarPaper, error) {
+	if app == nil || app.coreApp == nil {
+		return nil, fmt.Errorf("app instance is not initialized")
+	}
+
+	// 如果没有指定日期范围，默认使用今天
+	var startDate, endDate time.Time
+	if dateFrom == nil || dateTo == nil {
+		today := time.Now()
+		startDate = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+		endDate = startDate.Add(24 * time.Hour).Add(-1 * time.Second)
+	} else {
+		startDate = *dateFrom
+		endDate = *dateTo
+		// 确保 endDate 是当天的结束时间
+		endDate = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, 999999999, endDate.Location())
+	}
+
+	cond := models.SearchCondition{
+		Limit:    topK * 2, // 多获取一些，后续去重
+		DateFrom: &startDate,
+		DateTo:   &endDate,
+	}
+
+	// 构建搜索选项：使用示例论文进行语义搜索
+	opts := core.SearchOptions{
+		Examples:  []*models.Paper{zoteroPaper},
+		Condition: cond,
+		TopK:      topK,
+		Semantic:  true, // 使用语义搜索
+	}
+
+	results, err := app.coreApp.Search(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("搜索相似论文失败: %w", err)
+	}
+
+	return results, nil
+}
+
+// NewZoteroRecommendTool 创建统一的 Zotero 和推荐工具，接受 App 实例
+func NewZoteroRecommendTool(app *App) tool.InvokableTool {
+	tool, err := utils.InferTool("zotero_recommend",
+		"Interact with Zotero library and get daily paper recommendations. Supports three actions: get_collections (get Zotero collections list), get_papers (get papers from a collection), and daily_recommend (get paper recommendations based on Zotero papers for a specified date range). For daily_recommend, you can specify date_from and date_to to search papers within a date range (default: today). Note: arXiv and other platforms do not publish papers on weekends and holidays, so those dates will be automatically skipped.",
+		func(ctx context.Context, input *ZoteroRecommendInput) (output *ZoteroRecommendOutput, err error) {
+			cfg := config.Get()
+			if cfg.Zotero.UserID == "" || cfg.Zotero.APIKey == "" {
+				return &ZoteroRecommendOutput{
+					Success: false,
+					Message: "Zotero 配置不完整，请在配置文件中设置 zotero.user_id 和 zotero.api_key",
+				}, fmt.Errorf("zotero config incomplete")
+			}
+
+			client := zotero.NewClient(cfg.Zotero.UserID, cfg.Zotero.APIKey)
+
+			switch input.Action {
+			case "get_collections":
+				collections, err := client.GetCollections()
+				if err != nil {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: fmt.Sprintf("获取集合列表失败: %v", err),
+					}, err
+				}
+
+				return &ZoteroRecommendOutput{
+					Success: true,
+					Message: fmt.Sprintf("成功获取 %d 个集合", len(collections)),
+					Data:    collections,
+				}, nil
+
+			case "get_papers":
+				limit := input.Limit
+				if limit <= 0 {
+					limit = 100 // 默认限制
+				}
+
+				papers, err := client.GetPapers(input.CollectionKey, limit)
+				if err != nil {
+					// 检查是否是 404 错误（collection 不存在）
+					errMsg := err.Error()
+					if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "not found") {
+						// 如果指定了 collection 但不存在，尝试获取所有论文
+						if input.CollectionKey != "" {
+							logger.Warn("指定的 collection 不存在，尝试获取所有论文")
+							papers, err = client.GetPapers("", limit)
+							if err != nil {
+								return &ZoteroRecommendOutput{
+									Success: false,
+									Message: fmt.Sprintf("获取论文失败: %v", err),
+								}, err
+							}
+							return &ZoteroRecommendOutput{
+								Success: true,
+								Message: fmt.Sprintf("指定的 collection 不存在，已获取所有论文 %d 篇", len(papers)),
+								Data:    papers,
+							}, nil
+						}
+					}
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: fmt.Sprintf("获取论文失败: %v", err),
+					}, err
+				}
+
+				return &ZoteroRecommendOutput{
+					Success: true,
+					Message: fmt.Sprintf("成功获取 %d 篇论文", len(papers)),
+					Data:    papers,
+				}, nil
+
+			case "daily_recommend":
+				if app == nil || app.coreApp == nil {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: "app instance is not initialized",
+					}, fmt.Errorf("app instance is not initialized")
+				}
+
+				// 设置默认值
+				topK := input.TopK
+				if topK <= 0 {
+					topK = 5
+				}
+				maxRecommendations := input.MaxRecommendations
+				if maxRecommendations <= 0 {
+					maxRecommendations = 20
+				}
+
+				// 解析日期范围，如果没有指定则使用今天
+				var dateFrom, dateTo string
+				if input.DateFrom != "" {
+					dateFrom = input.DateFrom
+				} else {
+					dateFrom = time.Now().Format("2006-01-02")
+				}
+				if input.DateTo != "" {
+					dateTo = input.DateTo
+				} else {
+					dateTo = time.Now().Format("2006-01-02")
+				}
+
+				output := &ZoteroRecommendOutput{
+					Success:         true,
+					Recommendations: make([]RecommendationGroup, 0),
+				}
+
+				// 检查今天是否已爬取（仅当日期范围包含今天时）
+				today := time.Now().Format("2006-01-02")
+				alreadyCrawled := false
+				if dateFrom <= today && dateTo >= today {
+					alreadyCrawled = checkTodayCrawled()
+					output.CrawledToday = alreadyCrawled
+				}
+
+				// 如果需要爬取（未爬取或强制爬取）
+				if !alreadyCrawled || input.ForceCrawl {
+					logger.Info("开始爬取论文（日期范围: %s 至 %s）...", dateFrom, dateTo)
+					crawlCount, err := crawlPapers(ctx, app, input.Platforms, dateFrom, dateTo)
+					if err != nil {
+						logger.Warn("爬取论文时出错: %v", err)
+					} else {
+						output.CrawlCount = crawlCount
+						// 如果日期范围包含今天，标记今天已爬取
+						if dateFrom <= today && dateTo >= today {
+							if err := markTodayCrawled(); err != nil {
+								logger.Warn("标记爬取状态失败: %v", err)
+							}
+							output.CrawledToday = true
+						}
+						logger.Info("论文爬取完成，共 %d 篇", crawlCount)
+					}
+				} else {
+					logger.Info("今日论文已爬取，跳过爬取步骤")
+				}
+
+				// 从 Zotero 获取论文
+				logger.Info("从 Zotero 获取论文...")
+				zoteroPapers, err := getZoteroPapers(input.CollectionKey, 50) // 最多获取 50 篇作为参考
+				if err != nil {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: fmt.Sprintf("从 Zotero 获取论文失败: %v", err),
+					}, err
+				}
+
+				if len(zoteroPapers) == 0 {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: "Zotero 中没有找到论文，请先在 Zotero 中添加一些论文",
+					}, fmt.Errorf("no papers found in Zotero")
+				}
+
+				output.ZoteroPaperCount = len(zoteroPapers)
+				logger.Info("从 Zotero 获取到 %d 篇论文", len(zoteroPapers))
+
+				// 解析日期范围用于搜索
+				fromDate, err := time.Parse("2006-01-02", dateFrom)
+				if err != nil {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: fmt.Sprintf("无效的日期格式: %v", err),
+					}, err
+				}
+				toDate, err := time.Parse("2006-01-02", dateTo)
+				if err != nil {
+					return &ZoteroRecommendOutput{
+						Success: false,
+						Message: fmt.Sprintf("无效的日期格式: %v", err),
+					}, err
+				}
+				fromDate = time.Date(fromDate.Year(), fromDate.Month(), fromDate.Day(), 0, 0, 0, 0, fromDate.Location())
+				toDate = time.Date(toDate.Year(), toDate.Month(), toDate.Day(), 23, 59, 59, 999999999, toDate.Location())
+
+				// 为每篇 Zotero 论文搜索相似的新论文
+				allRecommendedPapers := make(map[string]*models.SimilarPaper) // 用于去重，key 是 source:source_id
+
+				for _, zoteroPaper := range zoteroPapers {
+					logger.Info("为论文 '%s' 搜索相似论文...", zoteroPaper.Title)
+					similarPapers, err := searchSimilarPapers(ctx, app, zoteroPaper, topK, &fromDate, &toDate)
+					if err != nil {
+						logger.Warn("搜索相似论文失败 (%s): %v", zoteroPaper.Title, err)
+						continue
+					}
+
+					// 过滤掉已经在 Zotero 中的论文（通过 source:source_id 匹配）
+					filteredPapers := make([]*models.SimilarPaper, 0)
+					for _, sp := range similarPapers {
+						key := fmt.Sprintf("%s:%s", sp.Paper.Source, sp.Paper.SourceID)
+						if _, exists := allRecommendedPapers[key]; !exists {
+							// 检查是否与 Zotero 论文重复
+							isDuplicate := false
+							for _, zp := range zoteroPapers {
+								if zp.Source == sp.Paper.Source && zp.SourceID == sp.Paper.SourceID {
+									isDuplicate = true
+									break
+								}
+							}
+							if !isDuplicate {
+								filteredPapers = append(filteredPapers, sp)
+								allRecommendedPapers[key] = sp
+							}
+						}
+					}
+
+					if len(filteredPapers) > 0 {
+						output.Recommendations = append(output.Recommendations, RecommendationGroup{
+							ZoteroPaper: *zoteroPaper,
+							Papers:      filteredPapers,
+						})
+					}
+
+					// 如果已达到最大推荐数量，停止
+					if len(allRecommendedPapers) >= maxRecommendations {
+						break
+					}
+				}
+
+				// 限制总推荐数量
+				if len(allRecommendedPapers) > maxRecommendations {
+					// 按相似度排序并取前 N 个
+					// 这里简化处理，只保留前几个组的推荐
+					total := 0
+					for i := range output.Recommendations {
+						if total >= maxRecommendations {
+							output.Recommendations = output.Recommendations[:i]
+							break
+						}
+						total += len(output.Recommendations[i].Papers)
+					}
+				}
+
+				totalRecommended := 0
+				for _, group := range output.Recommendations {
+					totalRecommended += len(group.Papers)
+				}
+
+				output.Message = fmt.Sprintf("成功推荐 %d 篇论文，基于 %d 篇 Zotero 论文", totalRecommended, len(output.Recommendations))
+				logger.Info("成功推荐 %d 篇论文，基于 %d 篇 Zotero 论文", totalRecommended, len(output.Recommendations))
+
+				return output, nil
+
+			default:
+				return &ZoteroRecommendOutput{
+					Success: false,
+					Message: fmt.Sprintf("不支持的操作: %s", input.Action),
+				}, fmt.Errorf("unsupported action: %s", input.Action)
+			}
+		})
+
+	if err != nil {
+		log.Fatalf("failed to create zotero recommend tool: %v", err)
+	}
+
+	return tool
+}

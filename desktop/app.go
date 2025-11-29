@@ -1,0 +1,308 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"PaperHunter/config"
+	"PaperHunter/internal/core"
+	"PaperHunter/internal/platform"
+	"PaperHunter/pkg/logger"
+
+	"github.com/cloudwego/eino/adk"
+)
+
+type App struct {
+	ctx          context.Context
+	coreApp      *core.App
+	logfile      string
+	config       *config.AppConfig
+	crawlService *CrawlService
+	agent        adk.Agent // Agent 实例
+}
+
+func NewApp() *App {
+	return &App{}
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	a.initLogger()
+	a.initConfig()
+
+	a.initCoreApp()
+	a.initAgent()
+}
+
+func (a *App) initConfig() {
+	homeDir, _ := os.UserHomeDir()
+	configFilePath := filepath.Join(homeDir, ".quicksearch", "config", "config.yaml")
+
+	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
+		logger.Info("配置文件不存在，正在创建示例配置文件: %s", configFilePath)
+		if err := config.CreateExampleConfig(); err != nil {
+			logger.Error("创建示例配置文件失败: %v", err)
+
+		} else {
+			logger.Info("已创建示例配置文件，请根据需要编辑配置文件")
+		}
+	} else if err != nil {
+		logger.Warn("检查配置文件时出错: %v，将使用默认配置", err)
+	}
+
+	cfg, err := config.Init("")
+	if err != nil {
+		logger.Error("加载配置失败: %v", err)
+
+		cfg, _ = config.Init("")
+	}
+
+	a.config = cfg
+	if cfg != nil {
+		logger.Info("配置加载成功，配置文件路径: %s", config.GetConfigPath())
+	}
+}
+
+func (a *App) initLogger() {
+	homeDir, _ := os.UserHomeDir()
+	logDir := filepath.Join(homeDir, ".quicksearch", "logs")
+
+	os.MkdirAll(logDir, 0755)
+	layout := "200601021504"
+
+	now := time.Now().Format(layout)
+
+	a.logfile = filepath.Join(logDir, now+".log")
+
+	logger.InitWithFile("INFO", false, a.logfile)
+
+	logger.Info("桌面应用启动，日志文件: %s", a.logfile)
+}
+
+func (a *App) initCoreApp() {
+	// 确保配置已初始化
+	if a.config == nil {
+		logger.Error("配置未初始化，无法启动核心模块")
+		return
+	}
+
+	cfg := a.config
+	var err error
+	a.coreApp, err = core.NewApp(cfg.Database.Path, cfg.Embedder,
+		map[string]platform.Config{
+			"arxiv":      &cfg.Arxiv,
+			"openreview": &cfg.OpenReview,
+			"acl":        &cfg.ACL,
+			"ssrn":       &cfg.SSRN,
+		}, cfg.Zotero, cfg.FeiShu)
+
+	if err != nil {
+		logger.Error("初始化核心模块失败: %v", err)
+	} else {
+		logger.Info("核心模块启动成功")
+	}
+}
+
+func (a *App) initAgent() {
+	// 只有在核心模块初始化成功后才初始化 agent
+	if a.coreApp == nil {
+		logger.Warn("核心模块未初始化，跳过 agent 初始化")
+		return
+	}
+
+	// 初始化 agent
+	agent := NewPaperAgent(a)
+	if agent == nil {
+		logger.Warn("Agent 初始化失败，某些功能可能不可用")
+	} else {
+		a.agent = agent
+		logger.Info("Agent 初始化成功")
+	}
+}
+
+func (a *App) SetLogLevel(level string) {
+	logger.SetLevel(level)
+	logger.Info("日志级别已设置为: %s", level)
+}
+
+func (a *App) CrawlPapers(platform string, params map[string]interface{}) (string, error) {
+	if a.coreApp == nil {
+		return "", fmt.Errorf("core app not initialized")
+	}
+
+	if a.crawlService == nil {
+		a.crawlService = NewCrawlService(a)
+	}
+
+	taskID, err := a.crawlService.StartCrawl(platform, params)
+	if err != nil {
+		return "", fmt.Errorf("failed to start crawl task: %w", err)
+	}
+
+	logger.Info("Started crawl task: %s for platform: %s", taskID, platform)
+	return taskID, nil
+}
+
+// GetCrawlTask 获取爬取任务状态
+func (a *App) GetCrawlTask(taskID string) (string, error) {
+	if a.crawlService == nil {
+		return "", fmt.Errorf("crawl service not initialized")
+	}
+
+	task, err := a.crawlService.GetTask(taskID)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(task)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal task: %w", err)
+	}
+
+	return string(data), nil
+}
+
+func (a *App) GetCrawlTaskLogs(taskID string) (string, error) {
+	if a.crawlService == nil {
+		return "", fmt.Errorf("crawl service not initialized")
+	}
+
+	logs, err := a.crawlService.GetTaskLogs(taskID)
+	if err != nil {
+		return "", err
+	}
+
+	// 序列化为JSON
+	data, err := json.Marshal(logs)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal logs: %w", err)
+	}
+
+	return string(data), nil
+}
+
+func (a *App) ExportSelection(format string, source string, ids []string, output string, feishuName string, collection string) (string, error) {
+	if a.coreApp == nil {
+		return "", fmt.Errorf("core app not initialized")
+	}
+	if len(ids) == 0 {
+		return "", fmt.Errorf("no papers selected")
+	}
+
+	var conditions []string
+	var params []interface{}
+
+	if source != "" {
+		// 生成条件: source = ? AND source_id IN (?,...,?)
+		placeholders := make([]string, 0, len(ids))
+		for range ids {
+			placeholders = append(placeholders, "?")
+		}
+		params = append(params, source)
+		for _, id := range ids {
+			params = append(params, id)
+		}
+		conditions = []string{"source = ?", fmt.Sprintf("source_id IN (%s)", strings.Join(placeholders, ","))}
+	} else {
+		// source 为空时，只使用 source_id 条件（但这种情况不应该发生）
+		placeholders := make([]string, 0, len(ids))
+		for range ids {
+			placeholders = append(placeholders, "?")
+		}
+		for _, id := range ids {
+			params = append(params, id)
+		}
+		conditions = []string{fmt.Sprintf("source_id IN (%s)", strings.Join(placeholders, ","))}
+	}
+
+	ctx := context.Background()
+	switch strings.ToLower(format) {
+	case "csv", "json":
+		if output == "" {
+			now := time.Now().Format("20060102_150405")
+			output = fmt.Sprintf("selection_%s.%s", now, format)
+		}
+		return output, a.coreApp.ExportPapers(ctx, format, output, conditions, params, 0)
+	case "zotero":
+		return "", a.coreApp.ExportToZotero(ctx, collection, conditions, params, 0)
+	case "feishu":
+		name := feishuName
+		if name == "" {
+			name = "Papers"
+		}
+		url, err := a.coreApp.ExportToFeiShuBitableWithURL(ctx, name, name, conditions, params, 0)
+		return url, err
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// ExportSelectionByPapers 按论文列表导出，支持多 source（通过传入完整的 source+id 对）
+// 用于前端传递完整的论文信息，避免 source 不匹配的问题
+func (a *App) ExportSelectionByPapers(format string, paperPairs []map[string]string, output string, feishuName string, collection string) (string, error) {
+	if a.coreApp == nil {
+		return "", fmt.Errorf("core app not initialized")
+	}
+	if len(paperPairs) == 0 {
+		return "", fmt.Errorf("no papers selected")
+	}
+
+	// 按 source 分组
+	sourceGroups := make(map[string][]string)
+	for _, pair := range paperPairs {
+		source := pair["source"]
+		id := pair["id"]
+		if source == "" || id == "" {
+			continue
+		}
+		sourceGroups[source] = append(sourceGroups[source], id)
+	}
+
+	// 构建 OR 条件: (source = 'arxiv' AND source_id IN (...)) OR (source = 'ssrn' AND source_id IN (...))
+	var conditionParts []string
+	var params []interface{}
+
+	for source, ids := range sourceGroups {
+		placeholders := make([]string, 0, len(ids))
+		for range ids {
+			placeholders = append(placeholders, "?")
+		}
+		conditionParts = append(conditionParts, fmt.Sprintf("(source = ? AND source_id IN (%s))", strings.Join(placeholders, ",")))
+		params = append(params, source)
+		for _, id := range ids {
+			params = append(params, id)
+		}
+	}
+
+	if len(conditionParts) == 0 {
+		return "", fmt.Errorf("no valid papers selected")
+	}
+
+	conditions := []string{fmt.Sprintf("(%s)", strings.Join(conditionParts, " OR "))}
+
+	ctx := context.Background()
+	switch strings.ToLower(format) {
+	case "csv", "json":
+		if output == "" {
+			now := time.Now().Format("20060102_150405")
+			output = fmt.Sprintf("selection_%s.%s", now, format)
+		}
+		return output, a.coreApp.ExportPapers(ctx, format, output, conditions, params, 0)
+	case "zotero":
+		return "", a.coreApp.ExportToZotero(ctx, collection, conditions, params, 0)
+	case "feishu":
+		name := feishuName
+		if name == "" {
+			name = "Papers"
+		}
+		url, err := a.coreApp.ExportToFeiShuBitableWithURL(ctx, name, name, conditions, params, 0)
+		return url, err
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}

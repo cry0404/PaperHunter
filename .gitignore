@@ -1,0 +1,17 @@
+develop.md
+WARP.md
+clitest/
+bin/
+agent/
+config/config.yaml
+.DS_Store
+.env
+db/init.sql
+quicksearch
+test/
+testagent/
+data/quicksearch.db
+*.csv
+*.exe
+BACKEND_TODO.md
+docs/

@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 400;
+  src: local(""),
+  url("../assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}
+
+@layer base {
+  :root {
+    /* Warm Beige #F3F0E9 - slightly adjusted for better contrast */
+    --background: 40 20% 94%; 
+    /* Deep Navy Blue #1B2A41 (Text & Accents) */
+    --foreground: 216 41% 18%;
+    
+    /* White/Lighter Beige for Cards */
+    --card: 0 0% 100%;
+    --card-foreground: 216 41% 18%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 41% 18%;
+    
+    /* Terracotta Red #D67052 */
+    --primary: 14 61% 58%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Mustard Yellow #F0B857 */
+    --secondary: 38 83% 64%;
+    --secondary-foreground: 216 41% 18%;
+    
+    /* Muted Beige/Grey */
+    --muted: 42 15% 90%;
+    --muted-foreground: 216 20% 45%;
+    
+    /* Deep Navy Blue #1B2A41 */
+    --accent: 216 41% 18%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Darker Beige/Grey for borders to be more visible */
+    --border: 216 10% 80%;
+    --input: 216 10% 80%;
+    
+    --ring: 14 61% 58%;
+    
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Dark Warm Grey Background #1E1D1B */
+    --background: 30 6% 11%;
+    /* Light Warm Beige Text #E6E1D3 */
+    --foreground: 40 20% 88%;
+    
+    /* Slightly lighter dark grey for cards #252422 */
+    --card: 30 4% 14%;
+    --card-foreground: 40 20% 88%;
+    
+    --popover: 30 4% 14%;
+    --popover-foreground: 40 20% 88%;
+    
+    /* Terracotta Red - slightly brighter for dark mode */
+    --primary: 14 61% 66%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Mustard Yellow - slightly brighter */
+    --secondary: 38 83% 74%;
+    --secondary-foreground: 216 41% 18%;
+    
+    /* Darker Muted Grey */
+    --muted: 30 4% 20%;
+    --muted-foreground: 40 10% 60%;
+    
+    /* Light Beige Accent */
+    --accent: 40 20% 88%;
+    --accent-foreground: 30 6% 11%;
+    
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 70% 30%;
+    --success-foreground: 0 0% 100%;
+    
+    --info: 199 80% 40%;
+    --info-foreground: 0 0% 100%;
+    
+    --warning: 38 90% 40%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Dark Grey Borders */
+    --border: 30 4% 25%;
+    --input: 30 4% 25%;
+    
+    --ring: 14 61% 66%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+    margin: 0;
+    /* Modern Sans-serif for body */
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+      "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+      sans-serif;
+  }
+  
+  /* Elegant Serif for Headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Georgia", "Times New Roman", Times, serif;
+    @apply font-semibold tracking-tight;
+  }
+
+  #root {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  /* Fix for date inputs in Webkit browsers */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.8;
+  }
+  
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+}
+
+/* macOS rounded corners and window styling */
+html, body {
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 允许内容区域的文字可以被选中 */
+#root {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 但保持按钮和交互元素不可选中 */
+button, [role="button"], input, select, textarea, a:not([data-selectable="true"]) {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* 允许特定内容区域选中 */
+.select-text, [data-selectable="true"], p, span:not(button span):not([role="button"] span), 
+div:not(button):not([role="button"]):not(input):not(select):not(textarea):not(a) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body {
+  background: transparent;
+}
+
+#root {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Clip content to rounded corners */
+#root > * {
+  border-radius: inherit;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 100%);
+  }
+  
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+
+  .dark .glass-card {
+    background: rgba(30, 29, 27, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .paper-texture {
+    background-color: hsl(var(--background));
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  }
+
+  .dark .paper-texture {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  
+  .hover-lift {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

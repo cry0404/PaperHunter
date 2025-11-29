@@ -1,0 +1,72 @@
+###############################################
+# QuickSearchPaper 配置示例（请复制后按需填写）
+# 保存为：
+# - 应用同级目录：config/config.yaml（便携式）
+# - 或用户目录：~/.quicksearch/config/config.yaml（全局）
+###############################################
+
+# Embedding 服务（用于向量检索），建议优先使用环境变量存放敏感信息
+embedder:
+  baseurl: ""            # 例如: https://api.openai.com/v1 或 https://api.siliconflow.cn/v1
+  apikey: ""             # API Key（留空时某些功能将不可用）
+  model: ""              # 模型名称，例如: text-embedding-3-small 或 Qwen/Qwen3-Embedding-4B
+  dim: 1536               # 向量维度，请与所选模型匹配
+
+# 数据库配置
+database:
+  path: ""               # 默认为 ~/.quicksearch/data/quicksearch.db，留空走默认
+
+# Zotero 集成（可选，用于导出）
+zotero:
+  user_id: ""            # 你的 Zotero 用户 ID
+  api_key: ""            # 你的 Zotero API Key
+
+# 飞书（FeiShu/Lark）集成（可选，用于导出到多维表格）
+feishu:
+  app_id: ""             # 飞书应用 App ID
+  app_secret: ""         # 飞书应用 App Secret
+
+# arXiv 平台配置
+arxiv:
+  use_api: true           # 是否使用官方 API（推荐）
+  proxy: ""              # 如需代理: http://127.0.0.1:7890
+  step: 50                # 抓取分页步长
+  timeout: 30             # 超时（秒）
+  api_base: "https://export.arxiv.org/api/query"
+  web_base: "https://arxiv.org/search/advanced"
+
+# OpenReview 平台配置
+openreview:
+  api_base: "https://api2.openreview.net"
+  proxy: ""
+  timeout: 30             # 超时（秒，最低建议 20）
+
+# ACL Anthology 平台配置
+acl:
+  base_url: "https://aclanthology.org"
+  timeout: 600s           # 可使用 Go 时长格式，如 600s/10m
+  proxy: ""
+  step: 100               # 扫描步长
+  use_rss: true           # RSS 模式（最新若干篇）
+  use_bibtex: false       # BibTeX 模式（全量数据，速度慢）
+
+# SSRN 平台配置（如已启用）
+# 若版本支持 SSRN，请根据实际需求取消注释并填写
+# ssrn:
+#   base_url: "https://papers.ssrn.com"
+#   timeout: 30s
+#   proxy: ""
+#   page_size: 20
+#   max_pages: 3
+#   rate_limit_per_second: 1.0
+#   sort: "AB_Date_D"
+
+# LLM（Agent）配置（可选，用于内置 Agent 功能）
+agent:
+  base_url: "https://openrouter.ai/api/v1"
+  model: "deepseek/deepseek-v3"
+  api_key: ""            # 若留空，部分 Agent 功能不可用
+  # 以下参数按需添加：
+  # temperature: 0.3
+  # max_tokens: 2000
+  # max_step: 10
