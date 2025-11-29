@@ -3,11 +3,15 @@
 import {main} from '../models';
 import {config} from '../models';
 
+export function AnalyzeSearchQuery(arg1:string):Promise<string>;
+
 export function CleanWithOptions(arg1:main.CleanOptions):Promise<main.CleanResult>;
 
 export function ClearLogs():Promise<void>;
 
 export function CrawlPapers(arg1:string,arg2:Record<string, any>):Promise<string>;
+
+export function DebugRecommendationInfo():Promise<string>;
 
 export function ExportSelection(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:string,arg6:string):Promise<string>;
 
@@ -26,6 +30,10 @@ export function GetDailyRecommendations(arg1:main.RecommendOptions):Promise<stri
 export function GetLogs():Promise<string>;
 
 export function GetPapers(arg1:number,arg2:number,arg3:string,arg4:string):Promise<main.PaperListResponse>;
+
+export function GetSearchContext():Promise<string>;
+
+export function GetSearchSuggestions(arg1:string):Promise<string>;
 
 export function ReloadConfig():Promise<void>;
 

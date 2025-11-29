@@ -27,7 +27,7 @@ func main() {
 		WebviewIsTransparent: false,
 		WindowIsTranslucent:  false,
 		About: &mac.AboutInfo{
-			Title:   "QuickSearchPaper",
+			Title:   "PaperHunter",
 			Message: "多平台学术论文爬取与语义搜索工具",
 			Icon:    iconBytes,
 		},
@@ -49,7 +49,7 @@ func main() {
 	case "darwin":
 		macOpts = macOptions
 		err := wails.Run(&options.App{
-			Title:  "QuickSearchPaper",
+			Title:  "PaperHunter",
 			Width:  1024,
 			Height: 768,
 			AssetServer: &assetserver.Options{
@@ -73,7 +73,7 @@ func main() {
 	case "windows":
 		winOpts = winOptions
 		err := wails.Run(&options.App{
-			Title:  "QuickSearchPaper",
+			Title:  "PaperHunter",
 			Width:  1024,
 			Height: 768,
 			AssetServer: &assetserver.Options{

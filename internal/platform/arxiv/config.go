@@ -12,9 +12,8 @@ type Config struct {
 	Timeout int    `mapstructure:"timeout" yaml:"timeout"`   // 超时时间（秒）
 
 	APIBase string `mapstructure:"api_base" yaml:"api_base"` // API 基础 URL
-	
-
-	WebBase string `mapstructure:"web_base" yaml:"web_base"` // 网页基础 URL
+	WebBase string `mapstructure:"web_base" yaml:"web_base"` // 网页搜索基础 URL
+	NewBase string `mapstructure:"new_base" yaml:"new_base"` // New Submissions 页面基础 URL
 }
 
 
@@ -25,6 +24,7 @@ func DefaultConfig() *Config {
 		Timeout: 30,
 		APIBase: "https://export.arxiv.org/api/query",
 		WebBase: "https://arxiv.org/search/advanced",
+		NewBase: "https://arxiv.org/list",
 	}
 }
 

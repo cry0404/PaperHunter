@@ -337,6 +337,51 @@ func (a *App) ZoteroCfg() ZoteroConfig {
 	return a.zoteroCfg
 }
 
+// GetPlatform 获取指定平台的实例
+func (a *App) GetPlatform(platformName string) (platform.Platform, error) {
+	prov, ok := Get(platformName)
+	if !ok {
+		return nil, fmt.Errorf("未知或未实现的平台: %s", platformName)
+	}
+
+	pcfg, ok := a.platformCfg[platformName]
+	if !ok {
+		pcfg = prov.DefaultConfig()
+	}
+
+	return prov.New(pcfg)
+}
+
+// SavePapers 保存论文列表到数据库并生成向量
+func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, error) {
+	count := 0
+	for _, p := range papers {
+		if p == nil {
+			continue
+		}
+		pid, err := a.db.Upsert(p)
+		if err != nil {
+			logger.Error("保存论文失败 [%s]: %v", p.URL, err)
+			continue
+		}
+		count++
+
+		// 生成向量
+		if a.embedder != nil {
+			text := emb.BuildEmbeddingText(p)
+			vec, err := a.embedder.EmbedQuery(ctx, text)
+			if err != nil {
+				logger.Warn("向量生成失败 [paper_id=%d]: %v", pid, err)
+			} else if len(vec) > 0 {
+				if err := a.db.SaveEmbedding(pid, a.embedder.ModelName(), text, vec); err != nil {
+					logger.Warn("向量保存失败 [paper_id=%d]: %v", pid, err)
+				}
+			}
+		}
+	}
+	return count, nil
+}
+
 // FeishuCfg 返回飞书配置
 func (a *App) FeishuCfg() FeiShuConfig {
 	return a.feishuCfg

@@ -19,10 +19,12 @@ export interface Paper {
 }
 
 export interface RecommendationGroup {
-  zoteroPaper: {
+  seedPaper: {
     title: string;
     authors: string[];
     abstract: string;
+    source?: string; // 种子论文来源（arXiv, user_interest, zotero等）
+    sourceId?: string;
   };
   papers: Paper[];
 }
@@ -35,8 +37,8 @@ export interface AgentLogEntry {
 
 interface RecommendResult {
   crawledToday: boolean;
-  crawlCount: number;
-  zoteroPaperCount: number;
+  arxivCrawlCount: number;
+  seedPaperCount: number;
   recommendations: RecommendationGroup[];
   message: string;
   agentLogs?: AgentLogEntry[];
@@ -52,12 +54,16 @@ interface RecommendContextType {
   interestQuery: string;
   dateFrom: string;
   dateTo: string;
+  localFilePath: string;
+  useLocalFile: boolean;
   selectedPapers: Set<string>;
 
   // Setters
   setInterestQuery: (q: string) => void;
   setDateFrom: (d: string) => void;
   setDateTo: (d: string) => void;
+  setLocalFilePath: (path: string) => void;
+  setUseLocalFile: (use: boolean) => void;
   setShowRecommendations: (show: boolean) => void;
   togglePaperSelection: (id: string) => void;
   selectAllPapers: () => void;
@@ -87,6 +93,8 @@ export const RecommendProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [interestQuery, setInterestQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [localFilePath, setLocalFilePath] = useState('');
+  const [useLocalFile, setUseLocalFile] = useState(false);
   const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
@@ -147,13 +155,15 @@ export const RecommendProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const resultJson = await GetDailyRecommendations({
         interestQuery: interestQuery.trim() || '',
-        platforms: ['arxiv', 'openreview', 'acl', 'ssrn'],
+        platforms: ['arxiv'], // 专注于arXiv平台
         zoteroCollection: '',
         topK: 5,
         maxRecommendations: 20,
         forceCrawl: false,
         dateFrom: dateFrom.trim() || '',
         dateTo: dateTo.trim() || '',
+        localFilePath: useLocalFile ? localFilePath : '',
+        localFileAction: useLocalFile ? 'import_for_recommend' : '',
       } as models.main.RecommendOptions);
 
       const result: RecommendResult = JSON.parse(resultJson);
@@ -193,12 +203,18 @@ export const RecommendProvider: React.FC<{ children: ReactNode }> = ({ children 
             .filter((p: any) => p.title && p.title.trim() !== '');
           
           return {
-            zoteroPaper: {
-              title: group.zoteroPaper?.title || group.zoteroPaper?.Title || '',
-              authors: Array.isArray(group.zoteroPaper?.authors) 
-                ? group.zoteroPaper.authors 
-                : (Array.isArray(group.zoteroPaper?.Authors) ? group.zoteroPaper.Authors : []),
-              abstract: group.zoteroPaper?.abstract || group.zoteroPaper?.Abstract || '',
+            seedPaper: {
+              title: group.seedPaper?.title || group.seedPaper?.Title || group.zoteroPaper?.title || group.zoteroPaper?.Title || '',
+              authors: Array.isArray(group.seedPaper?.authors)
+                ? group.seedPaper.authors
+                : (Array.isArray(group.seedPaper?.Authors)
+                  ? group.seedPaper.Authors
+                  : (Array.isArray(group.zoteroPaper?.authors)
+                    ? group.zoteroPaper.authors
+                    : (Array.isArray(group.zoteroPaper?.Authors) ? group.zoteroPaper.Authors : []))),
+              abstract: group.seedPaper?.abstract || group.seedPaper?.Abstract || group.zoteroPaper?.abstract || group.zoteroPaper?.Abstract || '',
+              source: group.seedPaper?.source || group.seedPaper?.Source || 'unknown',
+              sourceId: group.seedPaper?.sourceId || group.seedPaper?.SourceID || '',
             },
             papers: papers,
           };
@@ -281,9 +297,13 @@ export const RecommendProvider: React.FC<{ children: ReactNode }> = ({ children 
       interestQuery,
       dateFrom,
       dateTo,
+      localFilePath,
+      useLocalFile,
       setInterestQuery,
       setDateFrom,
       setDateTo,
+      setLocalFilePath,
+      setUseLocalFile,
       setShowRecommendations,
       selectedPapers,
       togglePaperSelection,

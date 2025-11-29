@@ -41,6 +41,36 @@ func (a *Adapter) Name() string { return "arxiv" }
 
 func (a *Adapter) GetConfig() platform.Config { return a.config }
 
+// FetchNewSubmissions 获取今日新提交的论文（通过 New Submissions 页面）
+// category 参数指定分类，如 "cs" 表示计算机科学全部，"cs.AI" 表示人工智能
+// 如果为空，默认使用 "cs"
+func (a *Adapter) FetchNewSubmissions(ctx context.Context, category string) (platform.Result, error) {
+	if category == "" {
+		category = "cs" // 默认 CS 全部
+	}
+
+	// 构建 URL: https://arxiv.org/list/cs/new
+	newBase := a.config.NewBase
+	if newBase == "" {
+		newBase = "https://arxiv.org/list"
+	}
+	newURL := fmt.Sprintf("%s/%s/new", newBase, category)
+	logger.Info("[arXiv] 获取今日新论文: %s", newURL)
+
+	content, err := a.request(ctx, newURL)
+	if err != nil {
+		return platform.Result{}, fmt.Errorf("fetch new submissions failed: %w", err)
+	}
+
+	papers, total, err := ParseNewSubmissionsHTML(content)
+	if err != nil {
+		return platform.Result{}, fmt.Errorf("failed to parse new submissions: %w", err)
+	}
+
+	logger.Info("[arXiv] 今日新论文: %d 篇", len(papers))
+	return platform.Result{Total: total, Papers: papers}, nil
+}
+
 func (a *Adapter) Search(ctx context.Context, q platform.Query) (platform.Result, error) {
 	if a.config.UseAPI {
 		return a.searchViaAPI(ctx, q)
@@ -49,25 +79,47 @@ func (a *Adapter) Search(ctx context.Context, q platform.Query) (platform.Result
 }
 
 // searchViaAPI 使用官方 API 搜索（支持分页）
+// 日期过滤在获取结果后进行，因为 arXiv API 的日期范围查询不可靠
 func (a *Adapter) searchViaAPI(ctx context.Context, q platform.Query) (platform.Result, error) {
 	searchQuery := a.buildAPIQuery(q)
+
+	// 解析日期范围（用于后续过滤）
+	var dateFrom, dateTo time.Time
+	hasDateFilter := false
+	if q.DateFrom != "" {
+		if t, err := time.Parse("2006-01-02", q.DateFrom); err == nil {
+			dateFrom = t
+			hasDateFilter = true
+		}
+	}
+	if q.DateTo != "" {
+		if t, err := time.Parse("2006-01-02", q.DateTo); err == nil {
+			// 设置为当天结束时间
+			dateTo = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+			hasDateFilter = true
+		}
+	}
+
+	if hasDateFilter {
+		logger.Info("[arXiv] 日期过滤: %s 至 %s", q.DateFrom, q.DateTo)
+	}
 
 	// 确定目标数量和每页大小
 	targetLimit := q.Limit
 	if targetLimit == 0 {
-		targetLimit = 20000
+		targetLimit = 500 // 默认限制 500 篇
 	}
 	pageSize := a.config.Step
 	if pageSize > 200 {
-		pageSize = 200 // arXiv API 单次最大 200, 我自己的测试
+		pageSize = 200 // arXiv API 单次最大 200
 	}
 
 	var allPapers []*models.Paper
 	totalFound := 0
 	start := q.Offset
+	consecutiveEmpty := 0 // 连续空结果计数
 
 	for {
-
 		remaining := targetLimit - len(allPapers)
 		if remaining <= 0 {
 			break
@@ -102,20 +154,53 @@ func (a *Adapter) searchViaAPI(ctx context.Context, q platform.Query) (platform.
 			logger.Info("[arXiv] 总共找到 %d 篇论文，开始分页抓取", total)
 		}
 
-		allPapers = append(allPapers, papers...)
-		logger.Info("[arXiv] 已抓取 %d/%d 篇", len(allPapers), totalFound)
+		// 日期过滤
+		filteredPapers := make([]*models.Paper, 0, len(papers))
+		tooOld := false
+		for _, p := range papers {
+			if hasDateFilter {
+				paperDate := p.FirstSubmittedAt
+				if paperDate.IsZero() {
+					paperDate = p.FirstAnnouncedAt
+				}
+
+				// 检查是否在日期范围内
+				if !dateFrom.IsZero() && paperDate.Before(dateFrom) {
+					tooOld = true // 论文太旧了，由于按日期降序，后面的也会太旧
+					continue
+				}
+				if !dateTo.IsZero() && paperDate.After(dateTo) {
+					continue // 论文太新，跳过
+				}
+			}
+			filteredPapers = append(filteredPapers, p)
+		}
+
+		if len(filteredPapers) == 0 {
+			consecutiveEmpty++
+		} else {
+			consecutiveEmpty = 0
+		}
+
+		allPapers = append(allPapers, filteredPapers...)
+		logger.Info("[arXiv] 已抓取 %d 篇（本页过滤后 %d 篇）", len(allPapers), len(filteredPapers))
 
 		// 判断是否结束
-		if len(papers) == 0 || len(allPapers) >= totalFound {
+		if len(papers) == 0 || len(allPapers) >= targetLimit {
+			break
+		}
+		// 如果论文太旧或连续多页无结果，停止
+		if tooOld || consecutiveEmpty >= 3 {
+			logger.Info("[arXiv] 论文已超出日期范围，停止抓取")
 			break
 		}
 
 		start += len(papers)
-		time.Sleep(1000 * time.Millisecond) //防止触发 429
+		time.Sleep(1000 * time.Millisecond) // 防止触发 429
 	}
 
 	logger.Info("[arXiv] API 抓取完成，共 %d 篇论文", len(allPapers))
-	return platform.Result{Total: totalFound, Papers: allPapers}, nil
+	return platform.Result{Total: len(allPapers), Papers: allPapers}, nil
 }
 
 // searchViaWeb 使用网页搜索（支持分页）
@@ -184,6 +269,8 @@ func (a *Adapter) searchViaWeb(ctx context.Context, q platform.Query) (platform.
 }
 
 // buildAPIQuery 构建 API 查询字符串
+// 注意：arXiv API 的 submittedDate 日期范围查询不太可靠，
+// 我们通过 sortBy=submittedDate 获取最新论文，然后在代码中过滤日期
 func (a *Adapter) buildAPIQuery(q platform.Query) string {
 	var parts []string
 
@@ -206,29 +293,14 @@ func (a *Adapter) buildAPIQuery(q platform.Query) string {
 		parts = append(parts, fmt.Sprintf("cat:%s", cat))
 	}
 
+	// 如果没有关键词和分类，默认使用 cs.* 分类
 	if len(parts) == 0 {
 		log.Printf("no keywords or categories provided, fallback to cat:cs.*")
-		return "cat:cs.*"
+		parts = append(parts, "cat:cs.*")
 	}
 
 	query := strings.Join(parts, " AND ")
-
-	if q.DateFrom != "" || q.DateTo != "" {
-		from := "*"
-		to := "*"
-		if q.DateFrom != "" {
-			if t, err := time.Parse("2006-01-02", q.DateFrom); err == nil {
-				from = t.Format("200601021504")
-			}
-		}
-		if q.DateTo != "" {
-			if t, err := time.Parse("2006-01-02", q.DateTo); err == nil {
-				to = t.Format("200601021504")
-			}
-		}
-		query += fmt.Sprintf(" AND submittedDate:[%s TO %s]", from, to)
-	}
-
+	log.Printf("[arXiv] API 查询: %s", query)
 	return query
 }
 

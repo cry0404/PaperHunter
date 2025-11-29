@@ -1,5 +1,5 @@
 ###############################################
-# QuickSearchPaper 配置示例（请复制后按需填写）
+# PaperHunter 配置示例（请复制后按需填写）
 # 保存为：
 # - 应用同级目录：config/config.yaml（便携式）
 # - 或用户目录：~/.quicksearch/config/config.yaml（全局）

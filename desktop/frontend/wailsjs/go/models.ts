@@ -34,6 +34,7 @@ export namespace arxiv {
 	    Timeout: number;
 	    APIBase: string;
 	    WebBase: string;
+	    NewBase: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -47,6 +48,7 @@ export namespace arxiv {
 	        this.Timeout = source["Timeout"];
 	        this.APIBase = source["APIBase"];
 	        this.WebBase = source["WebBase"];
+	        this.NewBase = source["NewBase"];
 	    }
 	}
 
@@ -301,6 +303,8 @@ export namespace main {
 	    forceCrawl: boolean;
 	    dateFrom: string;
 	    dateTo: string;
+	    localFilePath: string;
+	    localFileAction: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new RecommendOptions(source);
@@ -316,6 +320,8 @@ export namespace main {
 	        this.forceCrawl = source["forceCrawl"];
 	        this.dateFrom = source["dateFrom"];
 	        this.dateTo = source["dateTo"];
+	        this.localFilePath = source["localFilePath"];
+	        this.localFileAction = source["localFileAction"];
 	    }
 	}
 	export class SearchExample {

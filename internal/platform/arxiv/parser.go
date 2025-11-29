@@ -212,6 +212,131 @@ type AtomCategory struct {
 	Term string `xml:"term,attr"`
 }
 
+// ParseNewSubmissionsHTML 解析 arXiv New Submissions 页面
+// URL 格式: https://arxiv.org/list/cs/new
+func ParseNewSubmissionsHTML(htmlContent string) ([]*models.Paper, int, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to parse HTML: %w", err)
+	}
+
+	var papers []*models.Paper
+
+	// New submissions 页面的结构：
+	// <dl id="articles"> 或 <dl>
+	//   <dt>...</dt>  <- 包含 arXiv ID 和链接
+	//   <dd>...</dd>  <- 包含标题、作者、摘要
+	// </dl>
+
+	// 查找所有 dt 元素（每个 dt 对应一篇论文的元信息）
+	doc.Find("dl dt").Each(func(i int, dt *goquery.Selection) {
+		dd := dt.Next() // 对应的 dd 元素
+		if dd.Length() == 0 || goquery.NodeName(dd) != "dd" {
+			return
+		}
+
+		paper := &models.Paper{
+			Source: "arxiv",
+		}
+
+		// 从 dt 中提取 arXiv ID 和链接
+		// 格式: <a href="/abs/2411.xxxxx" title="Abstract">arXiv:2411.xxxxx</a>
+		dt.Find("a[href*='/abs/']").Each(func(_ int, link *goquery.Selection) {
+			href, exists := link.Attr("href")
+			if exists && paper.URL == "" {
+				if strings.HasPrefix(href, "/") {
+					paper.URL = "https://arxiv.org" + href
+				} else {
+					paper.URL = href
+				}
+				paper.SourceID = parseArxivIDFromURL(href)
+			}
+		})
+
+		// 如果没有找到 abs 链接，尝试其他方式
+		if paper.SourceID == "" {
+			// 尝试从文本中提取 arXiv ID
+			dtText := dt.Text()
+			re := regexp.MustCompile(`arXiv:(\d{4}\.\d{4,5})`)
+			matches := re.FindStringSubmatch(dtText)
+			if len(matches) > 1 {
+				paper.SourceID = matches[1]
+				paper.URL = "https://arxiv.org/abs/" + matches[1]
+			}
+		}
+
+		// 从 dd 中提取标题
+		// 格式: <div class="list-title mathjax">Title: xxxx</div>
+		if title := dd.Find("div.list-title"); title.Length() > 0 {
+			titleText := title.Text()
+			titleText = strings.TrimPrefix(titleText, "Title:")
+			titleText = strings.TrimPrefix(titleText, "Title :")
+			paper.Title = cleanText(titleText)
+		}
+
+		// 从 dd 中提取作者
+		// 格式: <div class="list-authors">Authors: xxx, yyy</div>
+		if authors := dd.Find("div.list-authors"); authors.Length() > 0 {
+			authorsText := authors.Text()
+			authorsText = strings.TrimPrefix(authorsText, "Authors:")
+			authorsText = strings.TrimPrefix(authorsText, "Authors :")
+			paper.Authors = parseAuthorsToSlice(cleanText(authorsText))
+		}
+
+		// 从 dd 中提取摘要
+		// 格式: <p class="mathjax">摘要内容</p>
+		if abstract := dd.Find("p.mathjax"); abstract.Length() > 0 {
+			paper.Abstract = cleanText(abstract.Text())
+		}
+
+		// 从 dd 中提取分类
+		// 格式: <span class="primary-subject">cs.AI</span>
+		var categories []string
+		dd.Find("span.primary-subject").Each(func(_ int, span *goquery.Selection) {
+			cat := strings.TrimSpace(span.Text())
+			if cat != "" {
+				categories = append(categories, cat)
+			}
+		})
+		// 也尝试从 list-subjects 中提取
+		if subjects := dd.Find("div.list-subjects"); subjects.Length() > 0 {
+			subjectsText := subjects.Text()
+			subjectsText = strings.TrimPrefix(subjectsText, "Subjects:")
+			subjectsText = strings.TrimPrefix(subjectsText, "Subjects :")
+			// 分类通常用分号或逗号分隔
+			for _, cat := range strings.Split(subjectsText, ";") {
+				cat = strings.TrimSpace(cat)
+				if cat != "" && !containsString(categories, cat) {
+					categories = append(categories, cat)
+				}
+			}
+		}
+		paper.Categories = categories
+
+		// 设置今天的日期作为发布日期（New Submissions 页面的论文都是今天公布的）
+		paper.FirstSubmittedAt = time.Now()
+		paper.FirstAnnouncedAt = time.Now()
+		paper.UpdatedAt = time.Now()
+
+		// 只添加有效的论文
+		if paper.Title != "" && paper.SourceID != "" {
+			papers = append(papers, paper)
+		}
+	})
+
+	return papers, len(papers), nil
+}
+
+// containsString 检查字符串切片是否包含指定字符串
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
 func ParseAtomFeed(xmlContent string) ([]*models.Paper, int, error) {
 	var feed AtomFeed
 	if err := xml.Unmarshal([]byte(xmlContent), &feed); err != nil {

@@ -11,6 +11,8 @@ import (
 
 	"PaperHunter/config"
 	"PaperHunter/internal/core"
+	"PaperHunter/internal/hyde"
+	"PaperHunter/internal/models"
 	"PaperHunter/internal/platform"
 	"PaperHunter/pkg/logger"
 
@@ -23,7 +25,9 @@ type App struct {
 	logfile      string
 	config       *config.AppConfig
 	crawlService *CrawlService
-	agent        adk.Agent // Agent 实例
+	agent        adk.Agent        // Agent 实例
+	searchTool   *AgentSearchTool // AgentSearchTool 实例
+	hydeSvc      hyde.Service     // HyDE 服务（用于生成虚拟论文）
 }
 
 func NewApp() *App {
@@ -36,7 +40,25 @@ func (a *App) startup(ctx context.Context) {
 	a.initConfig()
 
 	a.initCoreApp()
+	a.initHyDE()
+	a.initSearchTool()
 	a.initAgent()
+}
+
+func (a *App) initHyDE() {
+	if a.config == nil {
+		logger.Warn("配置未初始化，跳过 HyDE 服务初始化")
+		return
+	}
+
+	svc, err := hyde.New(a.config.LLM)
+	if err != nil {
+		logger.Error("HyDE 服务初始化失败: %v", err)
+		return
+	}
+
+	a.hydeSvc = svc
+	logger.Info("HyDE 服务初始化成功")
 }
 
 func (a *App) initConfig() {
@@ -92,6 +114,9 @@ func (a *App) initCoreApp() {
 	}
 
 	cfg := a.config
+
+	
+
 	var err error
 	a.coreApp, err = core.NewApp(cfg.Database.Path, cfg.Embedder,
 		map[string]platform.Config{
@@ -105,6 +130,15 @@ func (a *App) initCoreApp() {
 		logger.Error("初始化核心模块失败: %v", err)
 	} else {
 		logger.Info("核心模块启动成功")
+	}
+}
+
+func (a *App) initSearchTool() {
+	a.searchTool = NewAgentSearchTool()
+	if a.searchTool != nil {
+		logger.Info("AgentSearchTool 初始化成功")
+	} else {
+		logger.Error("AgentSearchTool 初始化失败")
 	}
 }
 
@@ -305,4 +339,173 @@ func (a *App) ExportSelectionByPapers(format string, paperPairs []map[string]str
 	default:
 		return "", fmt.Errorf("unsupported format: %s", format)
 	}
+}
+
+// AnalyzeSearchQuery 使用 AgentSearchTool 分析搜索查询
+func (a *App) AnalyzeSearchQuery(userQuery string) (string, error) {
+	if a.searchTool == nil {
+		return "", fmt.Errorf("AgentSearchTool not initialized")
+	}
+
+	ctx := context.Background()
+	enhancedQuery, err := a.searchTool.AnalyzeQuery(ctx, userQuery)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze query: %w", err)
+	}
+
+	// 序列化结果
+	data, err := json.MarshalIndent(enhancedQuery, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	return string(data), nil
+}
+
+// GetSearchSuggestions 获取搜索建议
+func (a *App) GetSearchSuggestions(userQuery string) (string, error) {
+	if a.searchTool == nil {
+		return "", fmt.Errorf("AgentSearchTool not initialized")
+	}
+
+	ctx := context.Background()
+	suggestions, err := a.searchTool.GetSearchSuggestion(ctx, userQuery)
+	if err != nil {
+		return "", fmt.Errorf("failed to get suggestions: %w", err)
+	}
+
+	// 序列化结果
+	result := map[string]interface{}{
+		"query":       userQuery,
+		"suggestions": suggestions,
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal suggestions: %w", err)
+	}
+
+	return string(data), nil
+}
+
+// GetSearchContext 获取搜索上下文信息（用于调试和展示）
+func (a *App) GetSearchContext() (string, error) {
+	if a.searchTool == nil {
+		return "", fmt.Errorf("AgentSearchTool not initialized")
+	}
+
+	ctx := context.Background()
+	context, err := a.searchTool.ExportSearchContext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get search context: %w", err)
+	}
+
+	return context, nil
+}
+
+// DebugRecommendationInfo 调试推荐信息
+func (a *App) DebugRecommendationInfo() (string, error) {
+	if a.coreApp == nil {
+		return "", fmt.Errorf("core app not initialized")
+	}
+
+	ctx := context.Background()
+	debugInfo := make(map[string]interface{})
+
+	// 1. 检查 Zotero 论文数量
+	zoteroPapers, err := getZoteroPapers("", 100) // 不限制集合
+	if err != nil {
+		debugInfo["zotero_error"] = err.Error()
+	} else {
+		debugInfo["zotero_paper_count"] = len(zoteroPapers)
+		debugInfo["zotero_papers"] = make([]map[string]interface{}, 0, len(zoteroPapers))
+		for i, paper := range zoteroPapers {
+			if i >= 10 { // 只显示前10篇
+				break
+			}
+			debugInfo["zotero_papers"] = append(debugInfo["zotero_papers"].([]map[string]interface{}), map[string]interface{}{
+				"title":        paper.Title,
+				"source":       paper.Source,
+				"source_id":    paper.SourceID,
+				"categories":   paper.Categories,
+				"abstract_len": len(paper.Abstract),
+			})
+		}
+	}
+
+	// 2. 检查数据库中的论文数量
+	today := time.Now()
+	startDate := time.Date(today.Year(), today.Month(), today.Day()-7, 0, 0, 0, 0, today.Location())
+	endDate := time.Date(today.Year(), today.Month(), today.Day(), 23, 59, 59, 999999999, today.Location())
+
+	// 统计不同平台的论文数量
+	platformCounts := make(map[string]int)
+	totalCount := 0
+
+	platforms := []string{"arxiv", "openreview", "acl", "ssrn"}
+	for _, platform := range platforms {
+		cond := models.SearchCondition{
+			Sources:  []string{platform},
+			DateFrom: &startDate,
+			DateTo:   &endDate,
+			Limit:    1000,
+		}
+
+		results, err := a.coreApp.Search(ctx, core.SearchOptions{
+			Condition: cond,
+			Semantic:  false,
+		})
+
+		if err != nil {
+			debugInfo[platform+"_error"] = err.Error()
+		} else {
+			platformCounts[platform] = len(results)
+			totalCount += len(results)
+		}
+	}
+
+	debugInfo["platform_counts"] = platformCounts
+	debugInfo["total_recent_papers"] = totalCount
+
+	// 3. 检查缓存状态
+	if a.searchTool != nil {
+		cacheInfo := make(map[string]interface{})
+		cacheInfo["cache_entries"] = len(a.searchTool.cache)
+
+		expiredCount := 0
+		now := time.Now()
+		for key, entry := range a.searchTool.cache {
+			if entry.ExpiresAt.Before(now) {
+				expiredCount++
+				_ = key // 避免未使用变量警告
+			}
+		}
+		cacheInfo["expired_entries"] = expiredCount
+		debugInfo["search_tool_cache"] = cacheInfo
+	}
+
+	// 4. 生成修复建议
+	suggestions := make([]string, 0)
+
+	if len(zoteroPapers) == 0 {
+		suggestions = append(suggestions, "📝 Zotero 库为空，建议添加一些种子论文以获得个性化推荐")
+	}
+
+	if totalCount == 0 {
+		suggestions = append(suggestions, "📅 数据库中没有最近论文，建议先进行论文爬取")
+	}
+
+	if totalCount < 100 {
+		suggestions = append(suggestions, "📊 数据库中论文数量较少，建议扩大爬取范围")
+	}
+
+	debugInfo["suggestions"] = suggestions
+
+	// 转换为JSON
+	data, err := json.MarshalIndent(debugInfo, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal debug info failed: %w", err)
+	}
+
+	return string(data), nil
 }
