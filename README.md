@@ -2,14 +2,21 @@
 
 **多平台学术论文爬取与语义搜索工具**
 
+![主页面](./img/image-20251129222357850.png)
+
 [![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
 
 **如果这个项目对你有帮助，请给一个 ⭐️ Star！**
 
 > TODO: 构建 desktop 部分，增加支持的平台数目
+>
 > TODO: 根据设定的关键词或者 examples 每日定时抓取可能会感兴趣的论文摘要
+>
 > TODO: 添加 config 支持代理池部分，配置 proxy = true or false 来解决 ssrn 的限流问题
+>
 > TODO: Download 部分，去设计一个下载对应的 pdf 然后对对应目录下的所有 pdf 做 deep reaserch 的页面
+>
+> TODO：考虑接入 firecrawl 从而增加更多平台适配性
 
 ## 📖 简介
 
@@ -60,7 +67,7 @@ PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜�
 #### 4. Export (导出)
 支持多种格式导出选中的论文：
 - **Zotero**: 直接同步到 Zotero 收藏夹。
-- **飞书多维表格**: 导出到飞书，便于团队协作。
+- **飞书多维表格**: 导出到飞书，便于团队协作，添加 a few shot 分析。
 - **CSV / JSON**: 通用数据格式导出。
 
 ## 开发指南
