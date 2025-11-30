@@ -89,7 +89,6 @@ func (a *App) generateHypotheticalPaperWithHyDE(userQuery string) (string, strin
 		return "", "", fmt.Errorf("HyDE 生成失败: %w", err)
 	}
 
-	logger.Info("HyDE 生成成功 - 标题: %s", paper.Title)
 	return paper.Title, paper.Abstract, nil
 }
 

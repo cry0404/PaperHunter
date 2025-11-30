@@ -81,7 +81,6 @@ func (s *Searcher) Search(ctx context.Context, opts SearchOptions) ([]*models.Si
 	var err error
 
 	if len(opts.Examples) > 0 {
-		logger.Info("使用 %d 个示例论文进行搜索", len(opts.Examples))
 		queryVec, err = s.embedFromExamples(ctx, opts.Examples)
 	} else if opts.Query != "" {
 		logger.Info("使用查询文本进行搜索: %s", opts.Query)

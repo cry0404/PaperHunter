@@ -29,7 +29,7 @@ const AboutView: React.FC = () => {
                   <div className="text-sm text-muted-foreground">多平台学术论文爬取与本地语义检索工具</div>
                 </div>
               </div>
-              <Button variant="outline" onClick={()=>open('https://PaperHunter')}>
+              <Button variant="outline" onClick={()=>open('https://github.com/cry0404/PaperHunter')}>
                 <GithubLineIcon className="w-4 h-4 mr-2" /> GitHub
               </Button>
             </div>

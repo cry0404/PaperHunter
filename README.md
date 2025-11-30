@@ -128,7 +128,7 @@ type Platform interface {
 
 ## 📧 联系方式
 
-- Issue: [GitHub Issues](https://PaperHunter/issues)
+- Issue: [GitHub Issues](https://github.com/cry0404/PaperHunter/issues)
 - Email: cry@sadcoder.me
 
 ---
