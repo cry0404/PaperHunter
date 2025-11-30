@@ -1,4 +1,8 @@
+<div align="center">
+
 # PaperHunter
+
+</div>
 
 **多平台学术论文爬取与语义搜索工具**
 
