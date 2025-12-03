@@ -524,7 +524,7 @@ func (c *Client) zoteroItemToPaper(item *Item) *models.Paper {
 		}
 	}
 
-	// 如果没有从 Extra 提取到，尝试从 ArchiveID 获取
+
 	if paper.SourceID == "" && item.Data.ArchiveID != nil {
 		paper.SourceID = *item.Data.ArchiveID
 		if item.Data.Repository != nil {
@@ -532,7 +532,6 @@ func (c *Client) zoteroItemToPaper(item *Item) *models.Paper {
 		}
 	}
 
-	// 转换标签为分类
 	if len(item.Data.Tags) > 0 {
 		paper.Categories = make([]string, 0, len(item.Data.Tags))
 		for _, tag := range item.Data.Tags {

@@ -42,10 +42,11 @@ func NewSumaryrizeAgent(app *App) adk.Agent {
 }
 
 func NewPDFSumaryrizeAgent(app *App) adk.Agent {
+  //TODO： 这里应该用于后续部分构建于 deep reaserch 界面
 	return nil
 }
 
-// NewPaperAgent 创建 Paper Agent，接受 App 实例
+
 func NewPaperAgent(app *App) adk.Agent {
 	ctx := context.Background()
 

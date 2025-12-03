@@ -83,15 +83,17 @@ func NewAgentSearchTool() *AgentSearchTool {
 	}
 }
 
-// GetSearchContext 获取搜索上下文信息（使用静态数据 + 简单动态信息）
+
+
+// TODO：持续性缓存部分
 func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContext, error) {
-	// 检查缓存
+
 	cacheKey := "search_context"
 	if entry, exists := ast.cache[cacheKey]; exists && entry.ExpiresAt.After(time.Now()) {
 		return entry.Data.(*SearchContext), nil
 	}
 
-	// 构建搜索上下文
+
 	searchContext := &SearchContext{
 		AvailableVenues:   ast.getStaticVenueInfo(),
 		ArxivCategories:   ast.getStaticArxivCategories(),
@@ -99,7 +101,7 @@ func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContex
 		CurrentSeason:     ast.getCurrentSeason(),
 	}
 
-	// 缓存结果（24小时有效期）
+	// TODO： 将缓存结果导出成本地 json 文件
 	ast.cache[cacheKey] = &CacheEntry{
 		Data:      searchContext,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
@@ -111,6 +113,8 @@ func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContex
 	return searchContext, nil
 }
 
+
+// TODO ：下面的静态信息都应该改为 agenticSearch 获取
 // getStaticVenueInfo 获取静态会议信息（2024-2025年主要会议）
 func (ast *AgentSearchTool) getStaticVenueInfo() []VenueInfo {
 	return []VenueInfo{
@@ -265,7 +269,7 @@ func (ast *AgentSearchTool) getStaticArxivCategories() []CategoryInfo {
 	}
 }
 
-// getCurrentTrendingKeywords 获取当前热门关键词（基于2024-2025趋势）
+
 func (ast *AgentSearchTool) getCurrentTrendingKeywords() []string {
 	return []string{
 		"large language models", "transformers", "diffusion models", "vision transformers",
@@ -277,7 +281,7 @@ func (ast *AgentSearchTool) getCurrentTrendingKeywords() []string {
 	}
 }
 
-// getCurrentSeason 获取当前学术季节
+
 func (ast *AgentSearchTool) getCurrentSeason() string {
 	month := time.Now().Month()
 	switch {

@@ -40,7 +40,7 @@ PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜�
 
 ### 安装
 
-从 [Releases](https://PaperHunter/releases) 页面下载对应平台的安装包（macOS/Windows）。
+从 [Releases](https://github/cry0404/PaperHunter/releases) 页面下载对应平台的安装包（macOS/Windows）。
 
 ### 配置
 

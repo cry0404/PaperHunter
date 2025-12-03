@@ -22,15 +22,16 @@ import (
 )
 
 // ZoteroRecommendInput 统一的 Zotero 和推荐工具输入参数（专注于arXiv每日推荐）
+
 type ZoteroRecommendInput struct {
 	// Action 操作类型：get_collections（获取集合列表）、get_papers（获取论文）、daily_recommend（arXiv每日推荐）
 	Action string `json:"action" jsonschema:"required,enum=get_collections,enum=get_papers,enum=daily_recommend,description=Action to perform: get_collections, get_papers, or arXiv daily_recommend"`
 
-	// 以下字段用于 get_papers 和 daily_recommend
+
 	CollectionKey string `json:"collection_key,omitempty" jsonschema:"description=Collection key for get_papers or daily_recommend action"`
 	Limit         int    `json:"limit,omitempty" jsonschema:"description=Limit number of papers to return (for get_papers)"`
 
-	// 以下字段仅用于 daily_recommend（专注于arXiv今日推荐）
+
 	TopK               int    `json:"top_k,omitempty" jsonschema:"description=Number of recommended papers (default: 10)"`
 	MaxRecommendations int    `json:"max_recommendations,omitempty" jsonschema:"description=Maximum total number of papers to recommend (default: 30)"`
 	ForceCrawl         bool   `json:"force_crawl,omitempty" jsonschema:"description=Force re-crawl today's arXiv papers (default: false)"`
@@ -44,11 +45,11 @@ type ZoteroRecommendInput struct {
 	LocalFileAction string `json:"local_file_action,omitempty" jsonschema:"description=Action: 'import_for_recommend'"`
 }
 
-// ZoteroRecommendOutput 统一的输出结果（专注于arXiv每日推荐）
+
 type ZoteroRecommendOutput struct {
 	Success bool `json:"success" jsonschema:"description=Whether the operation was successful"`
 
-	// 用于 get_collections 和 get_papers
+
 	Message string `json:"message,omitempty" jsonschema:"description=Result message"`
 	Data    any    `json:"data,omitempty" jsonschema:"description=Result data (collections or papers for get_collections/get_papers)"`
 
@@ -59,13 +60,13 @@ type ZoteroRecommendOutput struct {
 	Recommendations []RecommendationGroup `json:"recommendations,omitempty" jsonschema:"description=Grouped recommendations based on seed papers or interests (for daily_recommend)"`
 }
 
-// RecommendationGroup 基于种子论文或兴趣的推荐组
+
 type RecommendationGroup struct {
 	SeedPaper models.Paper           `json:"seed_paper" jsonschema:"description=The seed paper or interest this group is based on (Zotero paper or user interest)"`
 	Papers    []*models.SimilarPaper `json:"papers" jsonschema:"description=Recommended arXiv papers similar to the seed paper or interest"`
 }
 
-// getTodayCrawlStatusFile 获取今日爬取状态文件路径
+
 func getTodayCrawlStatusFile() string {
 	homeDir, _ := os.UserHomeDir()
 	statusDir := filepath.Join(homeDir, ".quicksearch", "status")
@@ -74,14 +75,14 @@ func getTodayCrawlStatusFile() string {
 	return filepath.Join(statusDir, fmt.Sprintf("crawl_%s.txt", today))
 }
 
-// checkTodayCrawled 检查今天是否已经爬取过
+
 func checkTodayCrawled() bool {
 	statusFile := getTodayCrawlStatusFile()
 	_, err := os.Stat(statusFile)
 	return err == nil
 }
 
-// markTodayCrawled 标记今天已爬取
+
 func markTodayCrawled() error {
 	statusFile := getTodayCrawlStatusFile()
 	return os.WriteFile(statusFile, []byte(time.Now().Format(time.RFC3339)), 0644)
@@ -238,10 +239,9 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 
 				papers, err := client.GetPapers(input.CollectionKey, limit)
 				if err != nil {
-					// 检查是否是 404 错误（collection 不存在）
 					errMsg := err.Error()
 					if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "not found") {
-						// 如果指定了 collection 但不存在，尝试获取所有论文
+
 						if input.CollectionKey != "" {
 							logger.Warn("指定的 collection 不存在，尝试获取所有论文")
 							papers, err = client.GetPapers("", limit)
@@ -343,7 +343,7 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 					})
 				}
 
-				// 支持本地JSON文件导入
+
 				if input.LocalFilePath != "" && input.LocalFileAction == "import_for_recommend" {
 					logger.Info("导入本地JSON文件: %s", input.LocalFilePath)
 					localPaper, err := importJSONFile(input.LocalFilePath)
@@ -355,7 +355,6 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 					}
 				}
 
-				// 可选：补充Zotero论文（如果有配置）
 				if cfg.Zotero.UserID != "" && cfg.Zotero.APIKey != "" && len(seeds) == 0 {
 					zoteroPapers, err := getZoteroPapers(input.CollectionKey, 10)
 					if err == nil && len(zoteroPapers) > 0 {
@@ -391,7 +390,7 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 				fromDate = time.Date(fromDate.Year(), fromDate.Month(), fromDate.Day(), 0, 0, 0, 0, fromDate.Location())
 				toDate = time.Date(toDate.Year(), toDate.Month(), toDate.Day(), 23, 59, 59, 999999999, toDate.Location())
 
-				// 简化搜索：直接基于兴趣搜索今日arXiv论文
+
 				allRecommendedPapers := make(map[string]*models.SimilarPaper)
 
 				for _, seedPaper := range seeds {
@@ -437,9 +436,8 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 					}
 				}
 
-				// 限制总推荐数量
+
 				if len(allRecommendedPapers) > maxRecommendations {
-					// 按相似度排序并取前 N 个
 					// 这里简化处理，只保留前几个组的推荐
 					total := 0
 					for i := range output.Recommendations {
@@ -481,7 +479,6 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 	return tool
 }
 
-// importJSONFile 从JSON文件导入论文信息（简化版）
 func importJSONFile(filePath string) (*models.Paper, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {

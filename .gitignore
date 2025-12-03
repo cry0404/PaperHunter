@@ -15,3 +15,4 @@ data/quicksearch.db
 *.exe
 BACKEND_TODO.md
 docs/
+.claude/

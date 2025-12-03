@@ -161,7 +161,7 @@ func NewSearchTool(app *App) tool.InvokableTool {
 			}, fmt.Errorf("请提供查询文本(query)或示例论文(examples)。如果基于 Zotero 推荐，请使用 zotero_recommend 工具")
 		}
 
-		// 构建 SearchOptions
+
 		opts := core.SearchOptions{
 			Query:     input.Query,
 			Examples:  examples,
@@ -170,11 +170,11 @@ func NewSearchTool(app *App) tool.InvokableTool {
 			Semantic:  input.Semantic,
 		}
 
-		// 添加调试日志
+
 		logger.Info("搜索参数: query=%s, examples_count=%d, source=%s, date_from=%s, date_to=%s, top_k=%d, limit=%d, semantic=%v",
 			input.Query, len(examples), input.Source, input.DateFrom, input.DateTo, topK, input.Limit, input.Semantic)
 
-		// 执行搜索
+
 		results, err := app.coreApp.Search(ctx, opts)
 		if err != nil {
 			return &SearchOutput{

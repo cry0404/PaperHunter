@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-//计算查询出来的相似度，根据相似度筛选文章
+
 
 
 // cosineSimilarity 计算余弦相似度, search 时调用

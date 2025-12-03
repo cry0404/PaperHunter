@@ -20,19 +20,19 @@ import (
 	zotero "PaperHunter/pkg/upload/zotero"
 )
 
-// ZoteroConfig Zotero 配置
+
 type ZoteroConfig struct {
-	UserID string `mapstructure:"user_id" yaml:"user_id"` // Zotero 用户 ID
-	APIKey string `mapstructure:"api_key" yaml:"api_key"` // Zotero API Key
+	UserID string `mapstructure:"user_id" yaml:"user_id"` 
+	APIKey string `mapstructure:"api_key" yaml:"api_key"` 
 }
 
-// FeiShu 的配置
+
 type FeiShuConfig struct {
-	AppID     string `mapstructure:"app_id" yaml:"app_id"`         // 飞书应用 ID
-	AppSecret string `mapstructure:"app_secret" yaml:"app_secret"` // 飞书应用密钥
+	AppID     string `mapstructure:"app_id" yaml:"app_id"`        
+	AppSecret string `mapstructure:"app_secret" yaml:"app_secret"` 
 }
 
-// GlobalApp 全局 app 实例
+
 var GlobalApp *App
 
 type App struct {
@@ -87,14 +87,14 @@ func (a *App) Close() error {
 	return a.db.Close()
 }
 
-// CrawlProgress 进度回调
+
 type CrawlProgress func(index int, total int, p *models.Paper)
 
 func (a *App) Crawl(ctx context.Context, platformName string, q platform.Query) (int, error) {
 	return a.CrawlWithProgress(ctx, platformName, q, nil)
 }
 
-// CrawlWithProgress 与 Crawl 相同，但支持回调汇报每篇论文的进度
+
 func (a *App) CrawlWithProgress(ctx context.Context, platformName string, q platform.Query, progress CrawlProgress) (int, error) {
 	logger.Info("开始爬取平台: %s", platformName)
 	prov, ok := Get(platformName)
@@ -255,7 +255,7 @@ func (a *App) ExportToFeiShuBitable(ctx context.Context, fileName, folderName st
 		return fmt.Errorf("feishu 配置不完整，请在配置文件中设置 feishu.app_id 和 feishu.app_secret")
 	}
 
-	// 查询论文
+
 	papers, err := a.db.GetPapersByConditions(conditions, params, limit)
 	if err != nil {
 		return fmt.Errorf("查询论文失败: %w", err)
@@ -267,7 +267,7 @@ func (a *App) ExportToFeiShuBitable(ctx context.Context, fileName, folderName st
 
 	logger.Info("找到 %d 篇论文待导出", len(papers))
 
-	// 创建临时 CSV 文件
+
 	tmpFile, err := os.CreateTemp("", "quicksearch_*.csv")
 	if err != nil {
 		return fmt.Errorf("创建临时文件失败: %w", err)
@@ -295,7 +295,6 @@ func (a *App) ExportToFeiShuBitable(ctx context.Context, fileName, folderName st
 	return nil
 }
 
-// ExportToFeiShuBitableWithURL 与 ExportToFeiShuBitable 类似，但返回创建的多维表格 URL
 func (a *App) ExportToFeiShuBitableWithURL(ctx context.Context, fileName, folderName string, conditions []string, params []interface{}, limit int) (string, error) {
 	logger.Info("开始导出到 FeiShu (with URL)")
 
@@ -337,7 +336,7 @@ func (a *App) ZoteroCfg() ZoteroConfig {
 	return a.zoteroCfg
 }
 
-// GetPlatform 获取指定平台的实例
+
 func (a *App) GetPlatform(platformName string) (platform.Platform, error) {
 	prov, ok := Get(platformName)
 	if !ok {
@@ -352,7 +351,7 @@ func (a *App) GetPlatform(platformName string) (platform.Platform, error) {
 	return prov.New(pcfg)
 }
 
-// SavePapers 保存论文列表到数据库并生成向量
+
 func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, error) {
 	count := 0
 	for _, p := range papers {
@@ -366,7 +365,7 @@ func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, erro
 		}
 		count++
 
-		// 生成向量
+
 		if a.embedder != nil {
 			text := emb.BuildEmbeddingText(p)
 			vec, err := a.embedder.EmbedQuery(ctx, text)
@@ -382,7 +381,7 @@ func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, erro
 	return count, nil
 }
 
-// FeishuCfg 返回飞书配置
+
 func (a *App) FeishuCfg() FeiShuConfig {
 	return a.feishuCfg
 }

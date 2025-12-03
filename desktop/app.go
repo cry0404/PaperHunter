@@ -12,7 +12,7 @@ import (
 	"PaperHunter/config"
 	"PaperHunter/internal/core"
 	"PaperHunter/internal/hyde"
-	"PaperHunter/internal/models"
+
 	"PaperHunter/internal/platform"
 	"PaperHunter/pkg/logger"
 
@@ -143,13 +143,11 @@ func (a *App) initSearchTool() {
 }
 
 func (a *App) initAgent() {
-	// 只有在核心模块初始化成功后才初始化 agent
 	if a.coreApp == nil {
 		logger.Warn("核心模块未初始化，跳过 agent 初始化")
 		return
 	}
 
-	// 初始化 agent
 	agent := NewPaperAgent(a)
 	if agent == nil {
 		logger.Warn("Agent 初始化失败，某些功能可能不可用")
@@ -182,7 +180,7 @@ func (a *App) CrawlPapers(platform string, params map[string]interface{}) (strin
 	return taskID, nil
 }
 
-// GetCrawlTask 获取爬取任务状态
+
 func (a *App) GetCrawlTask(taskID string) (string, error) {
 	if a.crawlService == nil {
 		return "", fmt.Errorf("crawl service not initialized")
@@ -211,7 +209,7 @@ func (a *App) GetCrawlTaskLogs(taskID string) (string, error) {
 		return "", err
 	}
 
-	// 序列化为JSON
+
 	data, err := json.Marshal(logs)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal logs: %w", err)
@@ -277,7 +275,6 @@ func (a *App) ExportSelection(format string, source string, ids []string, output
 }
 
 // ExportSelectionByPapers 按论文列表导出，支持多 source（通过传入完整的 source+id 对）
-// 用于前端传递完整的论文信息，避免 source 不匹配的问题
 func (a *App) ExportSelectionByPapers(format string, paperPairs []map[string]string, output string, feishuName string, collection string) (string, error) {
 	if a.coreApp == nil {
 		return "", fmt.Errorf("core app not initialized")
@@ -403,109 +400,4 @@ func (a *App) GetSearchContext() (string, error) {
 	return context, nil
 }
 
-// DebugRecommendationInfo 调试推荐信息
-func (a *App) DebugRecommendationInfo() (string, error) {
-	if a.coreApp == nil {
-		return "", fmt.Errorf("core app not initialized")
-	}
 
-	ctx := context.Background()
-	debugInfo := make(map[string]interface{})
-
-	// 1. 检查 Zotero 论文数量
-	zoteroPapers, err := getZoteroPapers("", 100) // 不限制集合
-	if err != nil {
-		debugInfo["zotero_error"] = err.Error()
-	} else {
-		debugInfo["zotero_paper_count"] = len(zoteroPapers)
-		debugInfo["zotero_papers"] = make([]map[string]interface{}, 0, len(zoteroPapers))
-		for i, paper := range zoteroPapers {
-			if i >= 10 { // 只显示前10篇
-				break
-			}
-			debugInfo["zotero_papers"] = append(debugInfo["zotero_papers"].([]map[string]interface{}), map[string]interface{}{
-				"title":        paper.Title,
-				"source":       paper.Source,
-				"source_id":    paper.SourceID,
-				"categories":   paper.Categories,
-				"abstract_len": len(paper.Abstract),
-			})
-		}
-	}
-
-	// 2. 检查数据库中的论文数量
-	today := time.Now()
-	startDate := time.Date(today.Year(), today.Month(), today.Day()-7, 0, 0, 0, 0, today.Location())
-	endDate := time.Date(today.Year(), today.Month(), today.Day(), 23, 59, 59, 999999999, today.Location())
-
-	// 统计不同平台的论文数量
-	platformCounts := make(map[string]int)
-	totalCount := 0
-
-	platforms := []string{"arxiv", "openreview", "acl", "ssrn"}
-	for _, platform := range platforms {
-		cond := models.SearchCondition{
-			Sources:  []string{platform},
-			DateFrom: &startDate,
-			DateTo:   &endDate,
-			Limit:    1000,
-		}
-
-		results, err := a.coreApp.Search(ctx, core.SearchOptions{
-			Condition: cond,
-			Semantic:  false,
-		})
-
-		if err != nil {
-			debugInfo[platform+"_error"] = err.Error()
-		} else {
-			platformCounts[platform] = len(results)
-			totalCount += len(results)
-		}
-	}
-
-	debugInfo["platform_counts"] = platformCounts
-	debugInfo["total_recent_papers"] = totalCount
-
-	// 3. 检查缓存状态
-	if a.searchTool != nil {
-		cacheInfo := make(map[string]interface{})
-		cacheInfo["cache_entries"] = len(a.searchTool.cache)
-
-		expiredCount := 0
-		now := time.Now()
-		for key, entry := range a.searchTool.cache {
-			if entry.ExpiresAt.Before(now) {
-				expiredCount++
-				_ = key // 避免未使用变量警告
-			}
-		}
-		cacheInfo["expired_entries"] = expiredCount
-		debugInfo["search_tool_cache"] = cacheInfo
-	}
-
-	// 4. 生成修复建议
-	suggestions := make([]string, 0)
-
-	if len(zoteroPapers) == 0 {
-		suggestions = append(suggestions, "📝 Zotero 库为空，建议添加一些种子论文以获得个性化推荐")
-	}
-
-	if totalCount == 0 {
-		suggestions = append(suggestions, "📅 数据库中没有最近论文，建议先进行论文爬取")
-	}
-
-	if totalCount < 100 {
-		suggestions = append(suggestions, "📊 数据库中论文数量较少，建议扩大爬取范围")
-	}
-
-	debugInfo["suggestions"] = suggestions
-
-	// 转换为JSON
-	data, err := json.MarshalIndent(debugInfo, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal debug info failed: %w", err)
-	}
-
-	return string(data), nil
-}

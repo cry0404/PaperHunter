@@ -189,7 +189,6 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 		totalRecommended += len(group.Papers)
 	}
 
-	// 记录搜索结果到日志
 	if totalRecommended == 0 {
 		notFoundLog := AgentLogEntry{
 			Type:      "assistant",

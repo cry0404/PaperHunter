@@ -41,7 +41,7 @@ func Register(p Provider) error {
 	return nil
 }
 
-// 初始化时调用
+
 func MustRegister(p Provider) {
 	if err := Register(p); err != nil {
 		panic(err)
