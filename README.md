@@ -10,7 +10,26 @@
 
 [![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
 
+<div align="center">
+
 **如果这个项目对你有帮助，请给一个 ⭐️ Star！**
+
+</div>
+
+
+<div align="center">
+
+你可以在[这里](https://www.douyin.com/video/7578161371604089792)听到我关于这个项目的简要介绍
+
+</div>
+
+
+<div align="center">
+
+### 需要注意的是，虽然 release 部分发出了 v1.0.1 版，但实际上是我乱发的，PaperHunter 还需要处理很多在黑客松环节使用了过多 vibe coding 留下来的技术债，请谨慎使用。
+
+</div>
+
 
 > TODO: 构建 desktop 部分，增加支持的平台数目
 >
@@ -40,7 +59,7 @@ PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜�
 
 ### 安装
 
-从 [Releases](https://github/cry0404/PaperHunter/releases) 页面下载对应平台的安装包（macOS/Windows）。
+从 [Releases](https://github.com/cry0404/PaperHunter/releases) 页面下载对应平台的安装包（macOS/Windows）。
 
 ### 配置
 
