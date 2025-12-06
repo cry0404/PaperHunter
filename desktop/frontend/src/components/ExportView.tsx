@@ -5,11 +5,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
-import DownloadLineIcon from 'remixicon-react/DownloadLineIcon';
-import BracesLineIcon from 'remixicon-react/BracesLineIcon';
-import TableLineIcon from 'remixicon-react/TableLineIcon';
-import DatabaseLineIcon from 'remixicon-react/DatabaseLineIcon';
-import BookOpenLineIcon from 'remixicon-react/BookOpenLineIcon';
 import { useToast } from './ui/use-toast';
 
 const ExportView: React.FC = () => {
@@ -92,17 +87,10 @@ const ExportView: React.FC = () => {
     <div className="flex flex-col h-full overflow-hidden animate-fade-in">
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
         <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <DownloadLineIcon className="w-5 h-5 text-primary" />
-              </div>
-              <CardTitle className="text-3xl font-display font-semibold">Export Papers</CardTitle>
-            </div>
-            <CardDescription className="text-base text-muted-foreground ml-13">
-              将论文摘要导出为 CSV、JSON 文件或同步到飞书多维表格和 Zotero
-            </CardDescription>
-          </div>
+          <CardTitle className="text-3xl font-display font-semibold">Export Papers</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">
+            将论文摘要导出为 CSV、JSON 文件或同步到飞书多维表格和 Zotero
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="flex-1 overflow-y-auto px-8 py-12">
@@ -116,18 +104,10 @@ const ExportView: React.FC = () => {
                       <SelectValue placeholder="选择导出格式" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="csv">
-                        <div className="flex items-center gap-2"><TableLineIcon className="w-4 h-4"/> CSV</div>
-                      </SelectItem>
-                      <SelectItem value="json">
-                        <div className="flex items-center gap-2"><BracesLineIcon className="w-4 h-4"/> JSON</div>
-                      </SelectItem>
-                      <SelectItem value="feishu">
-                        <div className="flex items-center gap-2"><DatabaseLineIcon className="w-4 h-4"/> 飞书</div>
-                      </SelectItem>
-                      <SelectItem value="zotero">
-                        <div className="flex items-center gap-2"><BookOpenLineIcon className="w-4 h-4"/> Zotero</div>
-                      </SelectItem>
+                      <SelectItem value="csv">CSV</SelectItem>
+                      <SelectItem value="json">JSON</SelectItem>
+                      <SelectItem value="feishu">飞书</SelectItem>
+                      <SelectItem value="zotero">Zotero</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

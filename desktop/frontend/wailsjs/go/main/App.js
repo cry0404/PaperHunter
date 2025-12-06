@@ -10,6 +10,10 @@ export function CleanWithOptions(arg1) {
   return window['go']['main']['App']['CleanWithOptions'](arg1);
 }
 
+export function ClearCrawlHistory() {
+  return window['go']['main']['App']['ClearCrawlHistory']();
+}
+
 export function ClearLogs() {
   return window['go']['main']['App']['ClearLogs']();
 }
@@ -18,8 +22,8 @@ export function CrawlPapers(arg1, arg2) {
   return window['go']['main']['App']['CrawlPapers'](arg1, arg2);
 }
 
-export function DebugRecommendationInfo() {
-  return window['go']['main']['App']['DebugRecommendationInfo']();
+export function ExportCrawlTask(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['ExportCrawlTask'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function ExportSelection(arg1, arg2, arg3, arg4, arg5, arg6) {
@@ -38,12 +42,20 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetCrawlHistory(arg1) {
+  return window['go']['main']['App']['GetCrawlHistory'](arg1);
+}
+
 export function GetCrawlTask(arg1) {
   return window['go']['main']['App']['GetCrawlTask'](arg1);
 }
 
 export function GetCrawlTaskLogs(arg1) {
   return window['go']['main']['App']['GetCrawlTaskLogs'](arg1);
+}
+
+export function GetCrawlTaskPapers(arg1) {
+  return window['go']['main']['App']['GetCrawlTaskPapers'](arg1);
 }
 
 export function GetDailyRecommendations(arg1) {

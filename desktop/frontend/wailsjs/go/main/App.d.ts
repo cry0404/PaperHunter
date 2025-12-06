@@ -7,11 +7,13 @@ export function AnalyzeSearchQuery(arg1:string):Promise<string>;
 
 export function CleanWithOptions(arg1:main.CleanOptions):Promise<main.CleanResult>;
 
+export function ClearCrawlHistory():Promise<void>;
+
 export function ClearLogs():Promise<void>;
 
 export function CrawlPapers(arg1:string,arg2:Record<string, any>):Promise<string>;
 
-export function DebugRecommendationInfo():Promise<string>;
+export function ExportCrawlTask(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 
 export function ExportSelection(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:string,arg6:string):Promise<string>;
 
@@ -21,9 +23,13 @@ export function ExportWithOptions(arg1:main.ExportOptions):Promise<string>;
 
 export function GetConfig():Promise<config.AppConfig>;
 
+export function GetCrawlHistory(arg1:number):Promise<string>;
+
 export function GetCrawlTask(arg1:string):Promise<string>;
 
 export function GetCrawlTaskLogs(arg1:string):Promise<string>;
+
+export function GetCrawlTaskPapers(arg1:string):Promise<string>;
 
 export function GetDailyRecommendations(arg1:main.RecommendOptions):Promise<string>;
 

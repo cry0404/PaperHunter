@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -25,7 +29,16 @@ type CrawlTask struct {
 	EndTime    *time.Time             `json:"end_time,omitempty"`
 	Error      string                 `json:"error,omitempty"`
 	Logs       []LogEntry             `json:"logs"`
+	Inserted   []PaperRef             `json:"inserted,omitempty"`
 	mu         sync.RWMutex
+}
+
+// PaperRef 记录本次任务成功入库的论文引用，便于前端一键导出
+type PaperRef struct {
+	Source   string `json:"source"`
+	SourceID string `json:"source_id"`
+	URL      string `json:"url"`
+	PaperID  int64  `json:"paper_id"`
 }
 
 // LogEntry 日志条目
@@ -36,6 +49,17 @@ type LogEntry struct {
 	Message   string    `json:"message"`
 	Platform  string    `json:"platform,omitempty"`
 	Count     int       `json:"count,omitempty"`
+	TaskID    string    `json:"task_id,omitempty"`
+}
+
+// CrawlHistory 任务历史记录（持久化）
+type CrawlHistory struct {
+	TaskID    string                 `json:"task_id"`
+	Platform  string                 `json:"platform"`
+	Params    map[string]interface{} `json:"params,omitempty"`
+	Total     int                    `json:"total"`
+	StartTime time.Time              `json:"start_time"`
+	EndTime   time.Time              `json:"end_time"`
 }
 
 // CrawlService 爬取服务
@@ -134,10 +158,20 @@ func (cs *CrawlService) executeCrawlTask(task *CrawlTask) {
 	// 执行爬取
 	ctx := context.Background()
 	// 带进度回调，逐条记录 URL
-	count, err := cs.app.coreApp.CrawlWithProgress(ctx, task.Platform, query, func(idx int, total int, p *models.Paper) {
+	count, err := cs.app.coreApp.CrawlWithProgress(ctx, task.Platform, query, func(idx int, total int, p *models.Paper, paperID int64) {
 		if p == nil {
 			return
 		}
+		// 记录入库成功的论文引用，便于一键导出
+		task.mu.Lock()
+		task.Inserted = append(task.Inserted, PaperRef{
+			Source:   p.Source,
+			SourceID: p.SourceID,
+			URL:      p.URL,
+			PaperID:  paperID,
+		})
+		task.mu.Unlock()
+
 		cs.addLog(task, "debug", fmt.Sprintf("[%d/%d] %s", idx+1, total, p.URL), task.Platform)
 	})
 
@@ -162,6 +196,7 @@ func (cs *CrawlService) executeCrawlTask(task *CrawlTask) {
 		cs.addLog(task, "error", fmt.Sprintf("爬取失败: %v", err), task.Platform)
 	} else {
 		cs.addLog(task, "success", fmt.Sprintf("爬取完成！共获取 %d 篇论文", count), task.Platform, count)
+		cs.saveTaskHistory(task)
 	}
 }
 
@@ -209,6 +244,110 @@ func (cs *CrawlService) buildQuery(platformName string, params map[string]interf
 	return query
 }
 
+// historyPath 获取历史文件路径（与数据库同目录）
+func (cs *CrawlService) historyPath() string {
+	if cs.app != nil && cs.app.config != nil && cs.app.config.Database.Path != "" {
+		return filepath.Join(filepath.Dir(cs.app.config.Database.Path), "crawl_history.jsonl")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".quicksearch", "data", "crawl_history.jsonl")
+}
+
+// saveTaskHistory 将完成的任务写入本地 jsonl
+func (cs *CrawlService) saveTaskHistory(task *CrawlTask) {
+	if task == nil || task.Status != "completed" || task.EndTime == nil {
+		return
+	}
+	entry := CrawlHistory{
+		TaskID:    task.ID,
+		Platform:  task.Platform,
+		Params:    task.Params,
+		Total:     task.TotalCount,
+		StartTime: task.StartTime,
+		EndTime:   *task.EndTime,
+	}
+	data, err := json.Marshal(entry)
+	if err != nil {
+		logger.Warn("写入历史失败(序列化): %v", err)
+		return
+	}
+	path := cs.historyPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		logger.Warn("创建历史目录失败: %v", err)
+		return
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logger.Warn("打开历史文件失败: %v", err)
+		return
+	}
+	defer f.Close()
+	if _, err := f.Write(append(data, '\n')); err != nil {
+		logger.Warn("写入历史文件失败: %v", err)
+	}
+
+	cs.truncateHistoryFile(10)
+}
+
+// loadHistory 读取历史记录，limit=0 表示全部
+func (cs *CrawlService) loadHistory(limit int) ([]CrawlHistory, error) {
+	path := cs.historyPath()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []CrawlHistory{}, nil
+		}
+		return nil, err
+	}
+	lines := bytes.Split(bytes.TrimSpace(content), []byte{'\n'})
+	history := make([]CrawlHistory, 0, len(lines))
+	for i := len(lines) - 1; i >= 0; i-- { // 逆序：最新在前
+		if len(lines[i]) == 0 {
+			continue
+		}
+		var h CrawlHistory
+		if err := json.Unmarshal(lines[i], &h); err != nil {
+			continue
+		}
+		history = append(history, h)
+		if limit > 0 && len(history) >= limit {
+			break
+		}
+	}
+	return history, nil
+}
+
+// truncateHistoryFile 仅保留最近 max 条
+func (cs *CrawlService) truncateHistoryFile(max int) {
+	if max <= 0 {
+		return
+	}
+	path := cs.historyPath()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	lines := bytes.Split(bytes.TrimSpace(content), []byte{'\n'})
+	if len(lines) <= max {
+		return
+	}
+	// 保留最新的 max 条（按写入顺序，文件末尾是最新）
+	start := len(lines) - max
+	trimmed := bytes.Join(lines[start:], []byte{'\n'})
+	if err := os.WriteFile(path, append(trimmed, '\n'), 0644); err != nil {
+		logger.Warn("截断历史文件失败: %v", err)
+	}
+}
+
+// clearHistory 删除历史文件
+func (cs *CrawlService) clearHistory() error {
+	path := cs.historyPath()
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 // addLog 添加日志
 func (cs *CrawlService) addLog(task *CrawlTask, level, message, platform string, count ...int) {
 	logEntry := LogEntry{
@@ -217,6 +356,7 @@ func (cs *CrawlService) addLog(task *CrawlTask, level, message, platform string,
 		Level:     level,
 		Message:   message,
 		Platform:  platform,
+		TaskID:    task.ID,
 	}
 
 	if len(count) > 0 {

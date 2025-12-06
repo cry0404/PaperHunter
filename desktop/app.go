@@ -334,6 +334,111 @@ func (a *App) ExportSelectionByPapers(format string, paperPairs []map[string]str
 	}
 }
 
+// ExportCrawlTask 按某次爬取任务的入库结果一键导出
+func (a *App) ExportCrawlTask(taskID string, format string, output string, feishuName string, collection string) (string, error) {
+	if a.crawlService == nil {
+		return "", fmt.Errorf("crawl service not initialized")
+	}
+	task, err := a.crawlService.GetTask(taskID)
+	if err != nil {
+		return "", err
+	}
+	if len(task.Inserted) == 0 {
+		return "", fmt.Errorf("no papers recorded for task: %s", taskID)
+	}
+
+	// 组装 paperPairs
+	pairs := make([]map[string]string, 0, len(task.Inserted))
+	for _, ref := range task.Inserted {
+		if ref.Source == "" || ref.SourceID == "" {
+			continue
+		}
+		pairs = append(pairs, map[string]string{
+			"source": ref.Source,
+			"id":     ref.SourceID,
+		})
+	}
+	if len(pairs) == 0 {
+		return "", fmt.Errorf("no valid papers recorded for task: %s", taskID)
+	}
+
+	// csv/json 默认输出文件
+	if (format == "csv" || format == "json") && strings.TrimSpace(output) == "" {
+		now := time.Now().Format("20060102_150405")
+		output = fmt.Sprintf("%s_%s.%s", taskID, now, format)
+	}
+
+	switch format {
+	case "csv", "json", "feishu", "zotero":
+		return a.ExportSelectionByPapers(format, pairs, output, feishuName, collection)
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// GetCrawlHistory 获取爬取历史（limit=0 返回全部，按时间逆序）
+func (a *App) GetCrawlHistory(limit int) (string, error) {
+	if a.crawlService == nil {
+		a.crawlService = NewCrawlService(a)
+	}
+	history, err := a.crawlService.loadHistory(limit)
+	if err != nil {
+		return "", err
+	}
+	data, err := json.Marshal(history)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal history: %w", err)
+	}
+	return string(data), nil
+}
+
+// ClearCrawlHistory 清空历史记录
+func (a *App) ClearCrawlHistory() error {
+	if a.crawlService == nil {
+		a.crawlService = NewCrawlService(a)
+	}
+	return a.crawlService.clearHistory()
+}
+
+// GetCrawlTaskPapers 返回某次爬取任务入库的论文列表（JSON）
+func (a *App) GetCrawlTaskPapers(taskID string) (string, error) {
+	if a.crawlService == nil {
+		return "", fmt.Errorf("crawl service not initialized")
+	}
+	task, err := a.crawlService.GetTask(taskID)
+	if err != nil {
+		return "", err
+	}
+	if len(task.Inserted) == 0 {
+		return "[]", nil
+	}
+
+	// 按 source 分组 ids
+	pairs := make(map[string][]string)
+	for _, ref := range task.Inserted {
+		if ref.Source == "" || ref.SourceID == "" {
+			continue
+		}
+		pairs[ref.Source] = append(pairs[ref.Source], ref.SourceID)
+	}
+
+	if a.coreApp == nil {
+		return "", fmt.Errorf("core app not initialized")
+	}
+
+	ctx := context.Background()
+	papers, err := a.coreApp.GetPapersByPairs(ctx, pairs)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(papers)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal papers: %w", err)
+	}
+	return string(data), nil
+}
+
 // AnalyzeSearchQuery 使用 AgentSearchTool 分析搜索查询
 func (a *App) AnalyzeSearchQuery(userQuery string) (string, error) {
 	if a.searchTool == nil {

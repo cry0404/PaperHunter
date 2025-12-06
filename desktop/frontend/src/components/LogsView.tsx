@@ -19,7 +19,6 @@ import ArrowDownLineIcon from 'remixicon-react/ArrowDownLineIcon';
 import RefreshLineIcon from 'remixicon-react/RefreshLineIcon';
 
 import { GetCrawlTask, GetCrawlTaskLogs, SetLogLevel } from '../../wailsjs/go/main/App';
-import { useToast } from './ui/use-toast';
 import { useCrawlContext } from '../context/CrawlContext';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 
@@ -30,6 +29,7 @@ interface LogEntry {
     message: string;
     platform?: string;
     count?: number;
+    task_id?: string;
 }
 
 interface CrawlTask {
@@ -54,12 +54,11 @@ const LogsView: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [globalLevel, setGlobalLevel] = useState<'INFO'|'DEBUG'>('INFO');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
-    const { toast } = useToast();
     
-    // 从 Context 获取当前任务ID和爬取状态
+
     const { currentTaskId, setIsCrawling } = useCrawlContext();
 
-    // 从URL参数获取任务ID
+
     const getTaskIdFromUrl = () => {
         const hash = window.location.hash;
         const match = hash.match(/taskId=([^&]+)/);

@@ -155,18 +155,18 @@ func getZoteroPapers(collectionKey string, limit int) ([]*models.Paper, error) {
 	return papers, nil
 }
 
-// searchSimilarPapers 基于种子论文搜索相似论文
-// 注意：日期过滤在爬取时已经做了，搜索时不再过滤，以获得更多结果
-func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper, topK int, _, _ *time.Time) ([]*models.SimilarPaper, error) {
+// searchSimilarPapers 基于种子论文搜索相似论文，支持日期过滤
+func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper, topK int, fromDate, toDate *time.Time) ([]*models.SimilarPaper, error) {
 	if app == nil || app.coreApp == nil {
 		return nil, fmt.Errorf("app not initialized")
 	}
 
-	// 构建搜索条件 - 不限制日期，搜索数据库中所有最近爬取的论文
+	// 构建搜索条件
 	cond := models.SearchCondition{
-		Limit:   topK * 3, // 多搜索一些，后续可以过滤
-		Sources: []string{"arxiv"},
-		// 不设置 DateFrom/DateTo，搜索所有已爬取的论文
+		Limit:    topK * 3, // 多搜索一些，后续可以过滤
+		Sources:  []string{"arxiv"},
+		DateFrom: fromDate,
+		DateTo:   toDate,
 	}
 
 	// 使用语义搜索

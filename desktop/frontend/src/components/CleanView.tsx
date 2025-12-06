@@ -65,9 +65,6 @@ const CleanView: React.FC = () => {
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
         <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Eraser className="w-5 h-5 text-primary" />
-            </div>
             <div>
               <CardTitle className="text-3xl font-display font-semibold">Data Cleaning</CardTitle>
               <CardDescription className="text-base text-muted-foreground mt-1">

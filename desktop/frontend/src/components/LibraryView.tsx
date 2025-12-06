@@ -21,7 +21,7 @@ import {
     ChevronRight, 
     ExternalLink, 
     RefreshCw, 
-    Library, 
+
     Sparkles,
     Download,
     Filter,
@@ -78,6 +78,7 @@ const LibraryView: React.FC = () => {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [taskId, setTaskId] = useState<string | null>(null);
     
 
     const [page, setPage] = useState(1);
@@ -104,11 +105,38 @@ const LibraryView: React.FC = () => {
     
 
     const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
-    
     const { toast } = useToast();
+
+    const loadTaskFromHash = useCallback(() => {
+        const hash = window.location.hash || '';
+        const match = hash.match(/taskId=([^&]+)/);
+        setTaskId(match ? decodeURIComponent(match[1]) : null);
+    }, []);
+    const loadTaskPapers = useCallback(async (id: string) => {
+        setLoading(true);
+        setSelectedPapers([]);
+        try {
+            const { GetCrawlTaskPapers } = await import('../../wailsjs/go/main/App');
+            const data = await GetCrawlTaskPapers(id);
+            const list = JSON.parse(data || '[]') as Paper[];
+            setPapers(list || []);
+            setTotal((list || []).length);
+            setPage(1);
+        } catch (error) {
+            console.error("Failed to load task papers:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load task papers",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, [toast]);
 
 
     const fetchPapers = useCallback(async () => {
+        if (taskId) return; // 任务视图不走常规列表
         if (mode === 'semantic') {
              handleSemanticSearch();
              return;
@@ -131,15 +159,31 @@ const LibraryView: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, source, search, mode, toast]); 
+    }, [page, pageSize, source, search, mode, toast, taskId]); 
     useEffect(() => {
+        if (taskId) return;
         if (mode === 'basic') {
             const timer = setTimeout(() => {
                 fetchPapers();
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [fetchPapers, mode]);
+    }, [fetchPapers, mode, taskId]);
+
+    useEffect(() => {
+        loadTaskFromHash();
+        const handler = () => loadTaskFromHash();
+        window.addEventListener('hashchange', handler);
+        return () => window.removeEventListener('hashchange', handler);
+    }, [loadTaskFromHash]);
+
+    useEffect(() => {
+        if (taskId) {
+            loadTaskPapers(taskId);
+        } else {
+            fetchPapers();
+        }
+    }, [taskId, loadTaskPapers, fetchPapers]);
 
     // 加载飞书的导出历史
     useEffect(() => {
@@ -394,16 +438,14 @@ const LibraryView: React.FC = () => {
                     <div className="flex items-center justify-between">
                          <div className="space-y-1">
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors bg-primary/10`}>
-                                    {mode === 'semantic' ? <Sparkles className="w-5 h-5 text-primary" /> : <Library className="w-5 h-5 text-primary" />}
-                                </div>
+                               
                                 <CardTitle className="text-3xl font-display font-semibold">Library</CardTitle>
                                 <Badge variant="outline" className="ml-2">
                                     {mode === 'semantic' ? 'Semantic Search' : 'Standard View'}
                                 </Badge>
                             </div>
                              <CardDescription className="text-base text-muted-foreground ml-13">
-                                管理你的论文仓库以及检索相关论文
+                                {taskId ? "当前展示的是某次爬取任务的论文（只读）" : "管理你的论文仓库以及检索相关论文"}
                             </CardDescription>
                          </div>
                          <div className="flex items-center gap-2">
@@ -412,7 +454,6 @@ const LibraryView: React.FC = () => {
                                 size="sm" 
                                 onClick={toggleMode}
                             >
-                                {mode === 'semantic' ? <Library className="mr-2 h-4 w-4"/> : <Sparkles className="mr-2 h-4 w-4" />}
                                 {mode === 'semantic' ? "切换到标准模式" : "尝试语义模糊检索"}
                             </Button>
                             <Separator orientation="vertical" className="h-6 mx-1" />

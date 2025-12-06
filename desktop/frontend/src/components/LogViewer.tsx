@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Trash2, Activity, MessageSquare, Terminal, User, Bot, Wrench, AlertTriangle } from "lucide-react";
-import { useRecommendContext, AgentLogEntry } from "../context/RecommendContext";
+import { useRecommendContext } from "../context/RecommendContext";
 
 // --- System Log Types & Component ---
 
@@ -321,9 +321,7 @@ const LogViewer: React.FC = () => {
           <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-primary" />
-                </div>
+            
                 <div>
                     <CardTitle className="text-2xl font-display font-bold">Logs & Activity</CardTitle>
                     <CardDescription>查看系统运行日志和 Agent 交互详情</CardDescription>
@@ -355,13 +353,7 @@ const LogViewer: React.FC = () => {
                             <Terminal className="w-4 h-4 mr-2" />
                             System Logs
                         </TabsTrigger>
-                        <TabsTrigger 
-                            value="agent"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2"
-                        >
-                            <Bot className="w-4 h-4 mr-2" />
-                            Agent Interaction
-                        </TabsTrigger>
+                      
                     </TabsList>
                 </div>
                 

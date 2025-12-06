@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,7 +6,18 @@ import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Separator } from './ui/separator';
 import { Checkbox } from './ui/checkbox';
-import DownloadLineIcon from 'remixicon-react/DownloadLineIcon';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+
 import PlayLineIcon from 'remixicon-react/PlayLineIcon';
 import SettingsLineIcon from 'remixicon-react/SettingsLineIcon';
 import DatabaseLineIcon from 'remixicon-react/DatabaseLineIcon';
@@ -14,13 +25,37 @@ import CalendarLineIcon from 'remixicon-react/CalendarLineIcon';
 import PriceTag3LineIcon from 'remixicon-react/PriceTag3LineIcon';
 import HashtagIcon from 'remixicon-react/HashtagIcon';
 import TerminalBoxLineIcon from 'remixicon-react/TerminalBoxLineIcon';
+import FileDownloadLineIcon from 'remixicon-react/FileDownloadLineIcon';
+import ExternalLinkLineIcon from 'remixicon-react/ExternalLinkLineIcon';
+import RefreshLineIcon from 'remixicon-react/RefreshLineIcon';
 import { GetConfig } from '../../wailsjs/go/main/App';
 import * as models from '../../wailsjs/go/models';
 import { useToast } from './ui/use-toast';
 import { useCrawlContext } from '../context/CrawlContext';
+import { EventsOn, EventsOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
+
+interface PaperItem {
+  ID: number;
+  Source: string;
+  SourceID: string;
+  Title: string;
+  Authors: string[];
+  Abstract: string;
+  URL: string;
+  FirstAnnouncedAt: string;
+}
+
+interface CrawlHistoryEntry {
+  task_id: string;
+  platform: string;
+  total: number;
+  start_time: string;
+  end_time: string;
+}
 
 const SearchView: React.FC = () => {
   const [config, setConfig] = useState<models.config.AppConfig | null>(null);
+  const completionNotifiedRef = useRef<string | null>(null);
   
   // 使用 Context 管理的状态
   const {
@@ -37,6 +72,20 @@ const SearchView: React.FC = () => {
   } = useCrawlContext();
   
   const [loading, setLoading] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'feishu' | 'zotero'>('csv');
+  const [exportOutput, setExportOutput] = useState('');
+  const [exportFeishuName, setExportFeishuName] = useState('');
+  const [exportCollection, setExportCollection] = useState('');
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportDialogFormat, setExportDialogFormat] = useState<'csv' | 'json' | 'feishu' | 'zotero'>('csv');
+  const [exportDialogPath, setExportDialogPath] = useState('');
+  const [exportDialogFeishu, setExportDialogFeishu] = useState('');
+  const [exportDialogCollection, setExportDialogCollection] = useState('');
+  const [taskPapers, setTaskPapers] = useState<PaperItem[]>([]);
+  const [taskPapersLoading, setTaskPapersLoading] = useState(false);
+  const [taskPapersError, setTaskPapersError] = useState<string | null>(null);
+  const [taskStatus, setTaskStatus] = useState<'pending' | 'running' | 'completed' | 'failed' | null>(null);
+  const [history, setHistory] = useState<CrawlHistoryEntry[]>([]);
   const { toast } = useToast();
 
   const loadConfig = async () => {
@@ -90,6 +139,9 @@ const SearchView: React.FC = () => {
     }
 
     setIsCrawling(true);
+    setTaskStatus('running');
+    setTaskPapers([]);
+    setTaskPapersError(null);
     
     try {
       console.log('Starting crawl with params:', crawlParams);
@@ -105,23 +157,11 @@ const SearchView: React.FC = () => {
       // 设置当前任务ID，但不强制跳转
       setCurrentTaskId(taskId);
       
-      toast({
-        title: "任务已提交",
-        description: "爬取任务正在后台运行，您可以点击日志按钮查看进度",
-        action: (
-          <Button 
-            variant="default"
-              size="sm" 
-              onClick={() => window.location.hash = `#/logs?taskId=${taskId}`}
-            >
-              查看日志
-            </Button>
-        ),
-      });
       
     } catch (error) {
       console.error('Crawl failed:', error);
       setIsCrawling(false); // 只有失败时才重置状态，成功时由后端状态或用户手动重置
+      setTaskStatus('failed');
       
       toast({
         title: "爬取失败",
@@ -164,6 +204,124 @@ const SearchView: React.FC = () => {
     return taskId;
   };
 
+  // 一键导出当前任务结果（默认 csv）
+  const handleExportCurrentTask = async (format?: 'csv' | 'json' | 'feishu' | 'zotero', override?: {
+    output?: string;
+    feishuName?: string;
+    collection?: string;
+  }) => {
+    const fmt = format || exportFormat;
+    let out = override?.output ?? exportOutput;
+    const feishuName = override?.feishuName ?? exportFeishuName;
+    const collection = override?.collection ?? exportCollection;
+
+    if (!currentTaskId) {
+      toast({
+        title: "暂无可导出的任务",
+        description: "请先运行并完成一次爬取任务",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((fmt === 'csv' || fmt === 'json') && !out.trim()) {
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+      out = `${currentTaskId || 'crawl'}_${stamp}.${fmt}`;
+    }
+    if (fmt === 'feishu' && !feishuName.trim()) {
+      toast({
+        title: "请填写飞书数据集名称",
+        description: "飞书导出需要数据集名称",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { ExportCrawlTask }: any = await import('../../wailsjs/go/main/App');
+      const result = await ExportCrawlTask(currentTaskId, fmt, out, feishuName, collection);
+
+      if ((fmt === 'csv' || fmt === 'json') && result) {
+        toast({
+          title: "导出完成",
+          description: (
+            <div className="break-all">
+              已保存到: <a className="underline" onClick={() => BrowserOpenURL(`file://${result}`)}>{result}</a>
+            </div>
+          ),
+        });
+      } else if (fmt === 'feishu' && result) {
+        toast({
+          title: "导出完成",
+          description: (
+            <div className="break-all">
+              已上传到飞书: <a className="underline" onClick={() => BrowserOpenURL(result)}>{result}</a>
+            </div>
+          ),
+        });
+      } else {
+        toast({
+          title: "导出完成",
+          description: "操作成功",
+        });
+      }
+    } catch (error) {
+      console.error('Export crawl task failed:', error);
+      toast({
+        title: "导出失败",
+        description: "导出过程中出错，请检查配置",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 拉取本次任务的论文列表，供页面内展示
+  const loadTaskPapers = async (taskId: string) => {
+    setTaskPapersLoading(true);
+    setTaskPapersError(null);
+    try {
+      const { GetCrawlTaskPapers }: any = await import('../../wailsjs/go/main/App');
+      const data = await GetCrawlTaskPapers(taskId);
+      const list = JSON.parse(data || '[]') as PaperItem[];
+      setTaskPapers(list);
+    } catch (error) {
+      console.error('Load task papers failed:', error);
+      setTaskPapersError('加载本次爬取的论文失败');
+    } finally {
+      setTaskPapersLoading(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const { GetCrawlHistory }: any = await import('../../wailsjs/go/main/App');
+      const data = await GetCrawlHistory(10);
+      const list = JSON.parse(data || '[]') as CrawlHistoryEntry[];
+      setHistory(list);
+    } catch (error) {
+      console.error('Load history failed:', error);
+    }
+  };
+
+  const formatTime = (t?: string) => {
+    if (!t) return '';
+    const d = new Date(t);
+    return d.toLocaleString();
+  };
+
+  const handleClearHistory = async () => {
+    try {
+      const { ClearCrawlHistory }: any = await import('../../wailsjs/go/main/App');
+      await ClearCrawlHistory();
+      setHistory([]);
+      toast({ title: "历史已清空", description: "仅保留最新的记录后清理完成" });
+    } catch (error) {
+      console.error('Clear history failed:', error);
+      toast({ title: "清空失败", description: "请检查日志后重试", variant: "destructive" });
+    }
+  };
+
   const addKeyword = () => {
     if (keywordInput.trim()) {
       setCrawlParams(prev => ({
@@ -200,7 +358,82 @@ const SearchView: React.FC = () => {
 
   useEffect(() => {
     loadConfig();
+    loadHistory();
   }, []);
+
+  // 监听后端流式日志，在任务完成/失败时及时复位状态
+  useEffect(() => {
+    if (!currentTaskId) return;
+
+    EventsOn("crawl-log", (logEntry: any) => {
+      if (logEntry?.task_id !== currentTaskId) return;
+
+      if (logEntry.level === 'success' || logEntry.level === 'error') {
+        setIsCrawling(false);
+        setTaskStatus(logEntry.level === 'success' ? 'completed' : 'failed');
+
+        if (completionNotifiedRef.current !== currentTaskId) {
+          completionNotifiedRef.current = currentTaskId;
+          // 拉取本次结果列表
+          if (logEntry.level === 'success') {
+            loadTaskPapers(currentTaskId);
+              loadHistory();
+          }
+          if (logEntry.level === 'error') {
+            toast({
+              title: "爬取失败",
+              description: "爬取过程中出现错误，查看日志获取详情",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+    });
+
+    return () => {
+      EventsOff("crawl-log");
+      // Wails EventsOn 不返回取消函数，这里简单移除事件监听
+      // 若未来升级 Wails 返回取消函数，可改为调用 cancel()
+    };
+  }, [currentTaskId, crawlParams.platform, setIsCrawling, toast]);
+
+  // 兜底轮询任务状态，防止事件丢失导致按钮一直“运行中”
+  useEffect(() => {
+    if (!isCrawling || !currentTaskId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { GetCrawlTask } = await import('../../wailsjs/go/main/App');
+        const taskJson = await GetCrawlTask(currentTaskId);
+        const task = JSON.parse(taskJson || '{}');
+        const status = task?.status;
+
+        if (status && status !== 'running' && status !== 'pending') {
+          setIsCrawling(false);
+          setTaskStatus(status);
+
+          if (completionNotifiedRef.current !== currentTaskId) {
+            completionNotifiedRef.current = currentTaskId;
+            if (status === 'completed') {
+              loadTaskPapers(currentTaskId);
+              loadHistory();
+            }
+            if (status !== 'completed') {
+              toast({
+                title: "爬取失败",
+                description: "爬取过程中出现错误，查看日志获取详情",
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll task status:', error);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [isCrawling, currentTaskId, crawlParams.platform, setIsCrawling, toast]);
 
   if (loading || !config) {
     return (
@@ -220,9 +453,7 @@ const SearchView: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <DownloadLineIcon className="w-5 h-5 text-primary" />
-                </div>
+              
                 <CardTitle className="text-3xl font-display font-semibold">Crawl Papers</CardTitle>
               </div>
               <CardDescription className="text-sm text-muted-foreground ml-13">
@@ -236,11 +467,11 @@ const SearchView: React.FC = () => {
                   onClick={() => window.location.hash = `#/logs?taskId=${currentTaskId}`}
                   size="sm"
                   variant="secondary"
-                  className="hover-lift"
+                  className="hover-lift flex items-center gap-2"
                 >
-                  <TerminalBoxLineIcon className="mr-2 h-4 w-4" />
-                  查看任务日志
-                  {isCrawling && <div className="w-2 h-2 rounded-full bg-green-500 ml-2 animate-pulse" />}
+                  <TerminalBoxLineIcon className="h-4 w-4" />
+                  <span>查看任务日志</span>
+                  {isCrawling && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
                 </Button>
               )}
               <Button
@@ -259,6 +490,128 @@ const SearchView: React.FC = () => {
 
         <CardContent className="flex-1 overflow-y-auto overflow-x-hidden px-8 py-6" style={{ overflowY: 'auto' }}>
           <div className="max-w-5xl mx-auto space-y-6">
+            {/* 当前任务结果展示，仅任务完成后显示 */}
+            {currentTaskId && taskStatus === 'completed' && (
+              <div className="glass-card p-4 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-muted-foreground">本次爬取任务</div>
+                    <div className="text-lg font-semibold">Task: {currentTaskId}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" disabled={taskPapers.length === 0}>
+                          <FileDownloadLineIcon className="w-4 h-4 mr-2" />
+                          一键导出
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuLabel>选择导出方式</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {(['csv','json','feishu','zotero'] as const).map(fmt => (
+                          <DropdownMenuItem
+                            key={fmt}
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setExportDialogFormat(fmt);
+                              if ((fmt === 'csv' || fmt === 'json') && currentTaskId) {
+                                const now = new Date();
+                                const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+                                setExportDialogPath(`${currentTaskId}_${stamp}.${fmt}`);
+                              } else {
+                                setExportDialogPath('');
+                              }
+                              setExportDialogFeishu('');
+                              setExportDialogCollection('');
+                              setExportDialogOpen(true);
+                            }}
+                          >
+                            {fmt.toUpperCase()}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                {taskPapersLoading && <div className="text-sm text-muted-foreground">正在加载本次爬取的论文...</div>}
+                {taskPapersError && <div className="text-sm text-destructive">{taskPapersError}</div>}
+                {!taskPapersLoading && taskPapers.length === 0 && (
+                  <div className="text-sm text-muted-foreground">暂无可展示的论文，请稍后或重试。</div>
+                )}
+                {!taskPapersLoading && taskPapers.length > 0 && (
+                  <div className="space-y-3">
+                    {taskPapers.map((paper) => (
+                      <div key={`${paper.Source}-${paper.SourceID}`} className="border border-border/60 rounded-lg p-3 hover:bg-card/60 transition">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="text-base font-semibold leading-snug">{paper.Title}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {paper.Authors?.join(', ')}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {paper.Source} · {paper.SourceID}
+                            </div>
+                          </div>
+                          {paper.URL && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => BrowserOpenURL(paper.URL)}
+                            >
+                              <ExternalLinkLineIcon className="w-4 h-4 mr-1" />
+                              打开
+                            </Button>
+                          )}
+                        </div>
+                        {paper.Abstract && (
+                          <div className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                            {paper.Abstract}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 历史记录 */}
+            {history.length > 0 && (
+              <div className="glass-card p-4 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-lg font-semibold">历史记录（保留最近 10 条）</div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={loadHistory}>
+                      <RefreshLineIcon className="w-4 h-4 mr-2" />
+                      刷新
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleClearHistory}>
+                      清空
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-72 overflow-auto pr-1">
+                  {history.map((h) => (
+                    <div key={h.task_id} className="border border-border/60 rounded-lg p-3 flex items-center justify-between hover:bg-card/60 transition">
+                      <div>
+                        <div className="text-sm font-semibold">{h.platform} · {h.total} 篇</div>
+                        <div className="text-xs text-muted-foreground">开始：{formatTime(h.start_time)}</div>
+                        <div className="text-xs text-muted-foreground">结束：{formatTime(h.end_time)}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => window.location.hash = `#/library?taskId=${h.task_id}`}
+                      >
+                        查看库
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Platform Selection */}
             <Tabs 
               value={crawlParams.platform} 
@@ -599,6 +952,83 @@ const SearchView: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* 导出配置弹窗 */}
+      <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <AlertDialogContent className="sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>导出本次爬取结果</AlertDialogTitle>
+            <AlertDialogDescription>
+              选择导出格式并填写必要信息，确认后立即导出。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">导出格式</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['csv','json','feishu','zotero'] as const).map(fmt => (
+                  <Button
+                    key={fmt}
+                    variant={exportDialogFormat === fmt ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setExportDialogFormat(fmt)}
+                  >
+                    {fmt.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {(exportDialogFormat === 'csv' || exportDialogFormat === 'json') && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">输出路径</Label>
+                <Input
+                  value={exportDialogPath}
+                  onChange={(e) => setExportDialogPath(e.target.value)}
+                  placeholder="例如: out/papers.csv"
+                />
+                <p className="text-xs text-muted-foreground">未填写将自动生成文件名</p>
+              </div>
+            )}
+
+            {exportDialogFormat === 'feishu' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">飞书数据集名称</Label>
+                <Input
+                  value={exportDialogFeishu}
+                  onChange={(e) => setExportDialogFeishu(e.target.value)}
+                  placeholder="例如：论文数据集"
+                />
+              </div>
+            )}
+
+            {exportDialogFormat === 'zotero' && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Zotero Collection Key（可选）</Label>
+                <Input
+                  value={exportDialogCollection}
+                  onChange={(e) => setExportDialogCollection(e.target.value)}
+                  placeholder="如 ABC123XY"
+                />
+              </div>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await handleExportCurrentTask(exportDialogFormat, {
+                  output: exportDialogPath,
+                  feishuName: exportDialogFeishu,
+                  collection: exportDialogCollection,
+                });
+                setExportDialogOpen(false);
+              }}
+            >
+              确认导出
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

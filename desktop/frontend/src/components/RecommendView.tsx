@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-import StarLineIcon from 'remixicon-react/StarLineIcon';
+
 import SearchLineIcon from 'remixicon-react/SearchLineIcon';
 import DownloadLineIcon from 'remixicon-react/DownloadLineIcon';
 import RefreshLineIcon from 'remixicon-react/RefreshLineIcon';
@@ -227,9 +227,7 @@ const RecommendView: React.FC = () => {
                 返回
               </Button>
               <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <StarLineIcon className="w-5 h-5 text-primary" />
-                </div>
+               
                 <div>
                   <CardTitle className="text-3xl font-display font-semibold ">
                     今日推荐 ({mergedPapers.length} 篇)
@@ -323,7 +321,7 @@ const RecommendView: React.FC = () => {
                                   </Badge>
                                   {paper.similarity > 0 && (
                                     <Badge variant="outline" className="text-xs">
-                                      <StarLineIcon className="w-3 h-3 mr-1" />
+
                                       {(paper.similarity * 100).toFixed(0)}%
                                     </Badge>
                                   )}
@@ -467,9 +465,7 @@ const RecommendView: React.FC = () => {
         <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <StarLineIcon className="w-5 h-5 text-primary" />
-              </div>
+              
               <CardTitle className="text-3xl font-display font-semibold">Daily Recommendations</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground">
@@ -600,9 +596,7 @@ const RecommendView: React.FC = () => {
           {mergedPapers.length === 0 && !loading && (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <StarLineIcon className="w-8 h-8 text-primary" />
-                </div>
+              
                 <div>
                   <h3 className="text-lg font-medium mb-1">获取今日推荐</h3>
                   <p className="text-sm text-muted-foreground">

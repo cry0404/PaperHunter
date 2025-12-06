@@ -21,9 +21,6 @@ const AboutView: React.FC = () => {
             {/* Header with Logo */}
             <div className="glass-card p-6 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <Logo size={32} className="text-primary" />
-                </div>
                 <div>
                   <div className="text-2xl font-display font-bold">PaperHunter</div>
                   <div className="text-sm text-muted-foreground">多平台学术论文爬取与本地语义检索工具</div>
@@ -52,7 +49,7 @@ const AboutView: React.FC = () => {
 
             <div className="glass-card p-6 rounded-2xl space-y-2">
               <div className="text-sm font-medium">飞书说明</div>
-              <div className="text-sm text-muted-foreground">导出到飞书多维表格需要在 Settings 配置 AppID 与 AppSecret。详细指引待补充。</div>
+              <div className="text-sm text-muted-foreground">导出到飞书多维表格需要在 Settings 配置 AppID 与 AppSecret。AppID 和 AppSecret 可在 https://open.feishu.cn 注册获取。具体可自行查看教程，非常方便。</div>
             </div>
           </div>
         </CardContent>
