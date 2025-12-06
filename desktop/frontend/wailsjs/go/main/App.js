@@ -62,10 +62,6 @@ export function GetSearchContext() {
   return window['go']['main']['App']['GetSearchContext']();
 }
 
-export function GetSearchSuggestions(arg1) {
-  return window['go']['main']['App']['GetSearchSuggestions'](arg1);
-}
-
 export function ReloadConfig() {
   return window['go']['main']['App']['ReloadConfig']();
 }

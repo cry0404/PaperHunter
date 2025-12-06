@@ -16,3 +16,7 @@ data/quicksearch.db
 BACKEND_TODO.md
 docs/
 .claude/
+cmd/
+practice/
+
+agent/

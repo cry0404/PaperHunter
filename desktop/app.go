@@ -115,8 +115,6 @@ func (a *App) initCoreApp() {
 
 	cfg := a.config
 
-	
-
 	var err error
 	a.coreApp, err = core.NewApp(cfg.Database.Path, cfg.Embedder,
 		map[string]platform.Config{
@@ -180,7 +178,6 @@ func (a *App) CrawlPapers(platform string, params map[string]interface{}) (strin
 	return taskID, nil
 }
 
-
 func (a *App) GetCrawlTask(taskID string) (string, error) {
 	if a.crawlService == nil {
 		return "", fmt.Errorf("crawl service not initialized")
@@ -208,7 +205,6 @@ func (a *App) GetCrawlTaskLogs(taskID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 
 	data, err := json.Marshal(logs)
 	if err != nil {
@@ -359,33 +355,7 @@ func (a *App) AnalyzeSearchQuery(userQuery string) (string, error) {
 	return string(data), nil
 }
 
-// GetSearchSuggestions 获取搜索建议
-func (a *App) GetSearchSuggestions(userQuery string) (string, error) {
-	if a.searchTool == nil {
-		return "", fmt.Errorf("AgentSearchTool not initialized")
-	}
-
-	ctx := context.Background()
-	suggestions, err := a.searchTool.GetSearchSuggestion(ctx, userQuery)
-	if err != nil {
-		return "", fmt.Errorf("failed to get suggestions: %w", err)
-	}
-
-	// 序列化结果
-	result := map[string]interface{}{
-		"query":       userQuery,
-		"suggestions": suggestions,
-	}
-
-	data, err := json.Marshal(result)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal suggestions: %w", err)
-	}
-
-	return string(data), nil
-}
-
-// GetSearchContext 获取搜索上下文信息（用于调试和展示）
+// GetSearchContext 获取搜索上下文信息
 func (a *App) GetSearchContext() (string, error) {
 	if a.searchTool == nil {
 		return "", fmt.Errorf("AgentSearchTool not initialized")
@@ -399,5 +369,3 @@ func (a *App) GetSearchContext() (string, error) {
 
 	return context, nil
 }
-
-

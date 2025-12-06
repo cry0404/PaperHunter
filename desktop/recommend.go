@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"PaperHunter/pkg/logger"
@@ -25,14 +26,14 @@ type RecommendOptions struct {
 	LocalFileAction    string   `json:"localFileAction"`    // 本地文件操作
 }
 
-// AgentLogEntry Agent 日志条目（简化版）
+
 type AgentLogEntry struct {
 	Type      string `json:"type"`      // "user", "assistant", "tool_call", "tool_result"
 	Content   string `json:"content"`   // 消息内容
 	Timestamp string `json:"timestamp"` // 时间戳
 }
 
-// RecommendResult 推荐结果（适配前端格式）
+
 type RecommendResult struct {
 	CrawledToday    bool                  `json:"crawledToday"`
 	ArxivCrawlCount int                   `json:"arxivCrawlCount"`
@@ -64,7 +65,7 @@ func (a *App) analyzeUserIntent(userQuery string) (*UserIntent, error) {
 	if err != nil {
 		logger.Warn("HyDE 生成失败，请根据日志调整: %v", err)
 		// 回退到简单方案
-		return nil, nil 
+		return nil, nil
 	}
 
 	return &UserIntent{
@@ -75,24 +76,40 @@ func (a *App) analyzeUserIntent(userQuery string) (*UserIntent, error) {
 
 // generateHypotheticalPaperWithHyDE 使用 HyDE 服务生成虚拟论文
 func (a *App) generateHypotheticalPaperWithHyDE(userQuery string) (string, string, error) {
+	fallback := func() (string, string, error) {
+		title := strings.TrimSpace(userQuery)
+		if title == "" {
+			title = "generic research topic"
+		}
+		abstract := title
+		return title, abstract, nil
+	}
+
 	if a.hydeSvc == nil {
-		return "", "", fmt.Errorf("HyDE 服务未初始化")
+		logger.Warn("HyDE 服务未初始化，使用降级结果")
+		return fallback()
 	}
 
 	if userQuery == "" {
-		return "", "", fmt.Errorf("用户查询为空")
+		return fallback()
 	}
 
 	ctx := context.Background()
 	paper, err := a.hydeSvc.GenerateHypotheticalPaper(ctx, userQuery)
 	if err != nil {
-		return "", "", fmt.Errorf("HyDE 生成失败: %w", err)
+		logger.Warn("HyDE 生成失败，使用降级结果: %v", err)
+		return fallback()
+	}
+
+	if paper == nil {
+		logger.Warn("HyDE 返回空结果，使用降级结果")
+		return fallback()
 	}
 
 	return paper.Title, paper.Abstract, nil
 }
 
-// GetDailyRecommendations 获取每日推荐（简化版）
+// GetDailyRecommendations 获取每日推荐
 func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 	logger.Info("开始获取每日推荐 - 兴趣: %s", opts.InterestQuery)
 
@@ -105,7 +122,6 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 
-	// 如果有本地文件，记录文件导入
 	if opts.LocalFilePath != "" {
 		agentLogs = append(agentLogs, AgentLogEntry{
 			Type:      "tool_call",
@@ -114,20 +130,18 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 		})
 	}
 
-	// 简化的意图分析
+
 	intent, err := a.analyzeUserIntent(opts.InterestQuery)
 	if err != nil {
 		logger.Error("意图分析失败: %v", err)
 		return "", fmt.Errorf("intent analysis failed: %w", err)
 	}
 
-
 	agentLogs = append(agentLogs, AgentLogEntry{
 		Type:      "tool_result",
 		Content:   fmt.Sprintf("Generated paper: %s\n%s", intent.GeneratedTitle, intent.GeneratedAbstract),
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
-
 
 	result, err := a.getDailyRecommendationsDirect(opts, agentLogs, intent)
 	if err != nil {
@@ -138,7 +152,6 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 			Timestamp: time.Now().Format(time.RFC3339),
 		})
 
-		// 返回错误但包含日志
 		errorResult := RecommendResult{
 			CrawledToday:    false,
 			ArxivCrawlCount: 0,

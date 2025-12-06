@@ -11,11 +11,10 @@ import (
 	"PaperHunter/pkg/logger"
 )
 
-// AgentSearchTool 简化版的智能搜索工具
+// AgentSearchTool ，考虑是否增加 google search
 type AgentSearchTool struct {
-	client    *http.Client
-	cache     map[string]*CacheEntry
-
+	client *http.Client
+	cache  map[string]*CacheEntry
 }
 
 // CacheEntry 缓存条目
@@ -26,11 +25,11 @@ type CacheEntry struct {
 
 // SearchContext 搜索上下文信息
 type SearchContext struct {
-	AvailableVenues    []VenueInfo    `json:"available_venues"`
-	ArxivCategories    []CategoryInfo `json:"arxiv_categories"`
-	TrendingKeywords   []string       `json:"trending_keywords"`
-	CurrentSeason      string         `json:"current_season"`
-	UpcomingDeadlines  []DeadlineInfo `json:"upcoming_deadlines"`
+	AvailableVenues   []VenueInfo    `json:"available_venues"`
+	ArxivCategories   []CategoryInfo `json:"arxiv_categories"`
+	TrendingKeywords  []string       `json:"trending_keywords"`
+	CurrentSeason     string         `json:"current_season"`
+	UpcomingDeadlines []DeadlineInfo `json:"upcoming_deadlines"`
 }
 
 // VenueInfo 会议信息
@@ -62,15 +61,13 @@ type DeadlineInfo struct {
 
 // EnhancedSearchQuery 增强的搜索查询
 type EnhancedSearchQuery struct {
-	OriginalQuery        string            `json:"original_query"`
-	OpenReviewVenue      string            `json:"openreview_venue"`
-	ArxivQuery           string            `json:"arxiv_query"`
-	RecommendedVenues    []string          `json:"recommended_venues"`
-	RecommendedCategories []string         `json:"recommended_categories"`
-	ExpandedKeywords     []string          `json:"expanded_keywords"`
-	SearchStrategy       string            `json:"search_strategy"`
-	Confidence           float64           `json:"confidence"`
-	Context              *SearchContext    `json:"context,omitempty"`
+	OriginalQuery         string         `json:"original_query"`
+	OpenReviewVenue       string         `json:"openreview_venue"`
+	ArxivQuery            string         `json:"arxiv_query"`
+	RecommendedVenues     []string       `json:"recommended_venues"`
+	RecommendedCategories []string       `json:"recommended_categories"`
+	ExpandedKeywords      []string       `json:"expanded_keywords"`
+	Context               *SearchContext `json:"context,omitempty"`
 }
 
 // NewAgentSearchTool 创建 AgentSearchTool 实例
@@ -83,8 +80,6 @@ func NewAgentSearchTool() *AgentSearchTool {
 	}
 }
 
-
-
 // TODO：持续性缓存部分
 func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContext, error) {
 
@@ -93,12 +88,11 @@ func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContex
 		return entry.Data.(*SearchContext), nil
 	}
 
-
 	searchContext := &SearchContext{
-		AvailableVenues:   ast.getStaticVenueInfo(),
-		ArxivCategories:   ast.getStaticArxivCategories(),
-		TrendingKeywords:  ast.getCurrentTrendingKeywords(),
-		CurrentSeason:     ast.getCurrentSeason(),
+		AvailableVenues:  ast.getStaticVenueInfo(),
+		ArxivCategories:  ast.getStaticArxivCategories(),
+		TrendingKeywords: ast.getCurrentTrendingKeywords(),
+		CurrentSeason:    ast.getCurrentSeason(),
 	}
 
 	// TODO： 将缓存结果导出成本地 json 文件
@@ -112,7 +106,6 @@ func (ast *AgentSearchTool) GetSearchContext(ctx context.Context) (*SearchContex
 
 	return searchContext, nil
 }
-
 
 // TODO ：下面的静态信息都应该改为 agenticSearch 获取
 // getStaticVenueInfo 获取静态会议信息（2024-2025年主要会议）
@@ -269,7 +262,6 @@ func (ast *AgentSearchTool) getStaticArxivCategories() []CategoryInfo {
 	}
 }
 
-
 func (ast *AgentSearchTool) getCurrentTrendingKeywords() []string {
 	return []string{
 		"large language models", "transformers", "diffusion models", "vision transformers",
@@ -280,7 +272,6 @@ func (ast *AgentSearchTool) getCurrentTrendingKeywords() []string {
 		"efficient transformers", "model compression", "knowledge distillation", "neural architecture search",
 	}
 }
-
 
 func (ast *AgentSearchTool) getCurrentSeason() string {
 	month := time.Now().Month()
@@ -297,8 +288,6 @@ func (ast *AgentSearchTool) getCurrentSeason() string {
 		return "winter_preparation_season"
 	}
 }
-
-
 
 // AnalyzeQuery 分析用户查询并生成增强搜索建议
 func (ast *AgentSearchTool) AnalyzeQuery(ctx context.Context, userQuery string) (*EnhancedSearchQuery, error) {
@@ -334,14 +323,8 @@ func (ast *AgentSearchTool) AnalyzeQuery(ctx context.Context, userQuery string) 
 	// 生成优化的 arXiv 查询
 	enhancedQuery.ArxivQuery = ast.buildArxivQuery(userQuery, enhancedQuery.RecommendedCategories, enhancedQuery.ExpandedKeywords)
 
-	// 计算置信度
-	enhancedQuery.Confidence = ast.calculateConfidence(enhancedQuery, searchContext)
-
-	// 确定搜索策略
-	enhancedQuery.SearchStrategy = ast.determineSearchStrategy(enhancedQuery, searchContext)
-
-	logger.Info("AgentSearchTool: 查询分析完成 - 会议: %s, 分类: %v, 置信度: %.2f",
-		enhancedQuery.OpenReviewVenue, enhancedQuery.RecommendedCategories, enhancedQuery.Confidence)
+	logger.Info("AgentSearchTool: 查询分析完成 - 会议: %s, 分类: %v",
+		enhancedQuery.OpenReviewVenue, enhancedQuery.RecommendedCategories)
 
 	return enhancedQuery, nil
 }
@@ -490,7 +473,6 @@ func (ast *AgentSearchTool) expandKeywords(queryTokens []string, trendingKeyword
 		}
 	}
 
-	// 限制扩展关键词数量
 	if len(expanded) > 10 {
 		expanded = expanded[:10]
 	}
@@ -502,12 +484,10 @@ func (ast *AgentSearchTool) expandKeywords(queryTokens []string, trendingKeyword
 func (ast *AgentSearchTool) buildArxivQuery(originalQuery string, categories []string, keywords []string) string {
 	var queryParts []string
 
-	// 基础查询：标题和摘要搜索
 	if len(keywords) > 0 {
 		titleTerms := make([]string, 0)
 		absTerms := make([]string, 0)
 
-		// 前5个关键词用于标题搜索
 		for i, kw := range keywords {
 			if i < 5 {
 				titleTerms = append(titleTerms, fmt.Sprintf("ti:\"%s\"", kw))
@@ -537,103 +517,13 @@ func (ast *AgentSearchTool) buildArxivQuery(originalQuery string, categories []s
 		queryParts = append(queryParts, fmt.Sprintf("(%s)", strings.Join(catTerms, " OR ")))
 	}
 
-	// 构建最终查询
 	if len(queryParts) == 1 {
 		return queryParts[0]
 	}
 	return strings.Join(queryParts, " AND ")
 }
 
-// calculateConfidence 计算置信度
-func (ast *AgentSearchTool) calculateConfidence(query *EnhancedSearchQuery, _ *SearchContext) float64 {
-	confidence := 0.5 // 基础置信度
-
-	// 如果匹配到会议，提高置信度
-	if query.OpenReviewVenue != "" {
-		confidence += 0.25
-	}
-
-	// 如果匹配到分类，提高置信度
-	if len(query.RecommendedCategories) > 0 {
-		confidence += 0.15
-	}
-
-	// 如果扩展了关键词，提高置信度
-	if len(query.ExpandedKeywords) > len(strings.Fields(query.OriginalQuery)) {
-		confidence += 0.1
-	}
-
-	// 确保置信度在合理范围内
-	if confidence > 1.0 {
-		confidence = 1.0
-	}
-	if confidence < 0.0 {
-		confidence = 0.0
-	}
-
-	return confidence
-}
-
-// determineSearchStrategy 确定搜索策略
-func (ast *AgentSearchTool) determineSearchStrategy(query *EnhancedSearchQuery, _ *SearchContext) string {
-	if query.OpenReviewVenue != "" {
-		if len(query.RecommendedCategories) > 0 {
-			return "hybrid_conference_and_category"
-		}
-		return "conference_focused"
-	}
-
-	if len(query.RecommendedCategories) > 0 {
-		return "category_focused"
-	}
-
-	if query.Confidence > 0.7 {
-		return "keyword_optimized"
-	}
-
-	return "general_search"
-}
-
-// GetSearchSuggestion 获取搜索建议
-func (ast *AgentSearchTool) GetSearchSuggestion(_ context.Context, userQuery string) ([]string, error) {
-	enhancedQuery, err := ast.AnalyzeQuery(context.Background(), userQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	var suggestions []string
-
-	// 基于搜索策略生成建议
-	switch enhancedQuery.SearchStrategy {
-	case "conference_focused":
-		suggestions = append(suggestions, fmt.Sprintf("建议专注于 %s 会议的最新论文", enhancedQuery.OpenReviewVenue))
-	case "category_focused":
-		suggestions = append(suggestions, fmt.Sprintf("建议关注 %s 等分类的论文", strings.Join(enhancedQuery.RecommendedCategories, ", ")))
-	case "hybrid_conference_and_category":
-		suggestions = append(suggestions, fmt.Sprintf("建议结合 %s 会议和 %s 分类进行搜索",
-			enhancedQuery.OpenReviewVenue, strings.Join(enhancedQuery.RecommendedCategories, ", ")))
-	default:
-		suggestions = append(suggestions, "建议使用更具体的关键词以获得更好的搜索结果")
-	}
-
-	// 添加当前季节的建议
-	if enhancedQuery.Context != nil {
-		switch enhancedQuery.Context.CurrentSeason {
-		case "winter_submission_season":
-			suggestions = append(suggestions, "当前是论文投稿旺季，可以关注最新的研究成果")
-		case "summer_conference_season":
-			suggestions = append(suggestions, "当前是会议季，可以关注顶级会议的最新论文")
-		}
-	}
-
-	// 如果有即将到来的截止日期，提供建议
-	if enhancedQuery.Context != nil && len(enhancedQuery.Context.UpcomingDeadlines) > 0 {
-		deadline := enhancedQuery.Context.UpcomingDeadlines[0]
-		suggestions = append(suggestions, fmt.Sprintf("即将截止: %s (%s)", deadline.VenueName, deadline.Deadline))
-	}
-
-	return suggestions, nil
-}
+// （已删除置信度和搜索建议相关逻辑）
 
 // ExportSearchContext 导出搜索上下文为JSON（用于调试）
 func (ast *AgentSearchTool) ExportSearchContext(_ context.Context) (string, error) {

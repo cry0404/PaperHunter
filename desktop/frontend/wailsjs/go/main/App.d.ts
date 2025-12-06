@@ -33,8 +33,6 @@ export function GetPapers(arg1:number,arg2:number,arg3:string,arg4:string):Promi
 
 export function GetSearchContext():Promise<string>;
 
-export function GetSearchSuggestions(arg1:string):Promise<string>;
-
 export function ReloadConfig():Promise<void>;
 
 export function SearchWithOptions(arg1:main.SearchOptions):Promise<string>;
