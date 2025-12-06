@@ -26,12 +26,10 @@
 
 <div align="center">
 
-### 需要注意的是，虽然 release 部分发出了 v1.0.1 版，但实际上是我乱发的，PaperHunter 还需要处理很多在黑客松环节使用了过多 vibe coding 留下来的技术债，请谨慎使用。
+### 需要注意的是， 现在的 0.0.1 版可能充满了 bug。
 
 </div>
 
-
-> TODO: 构建 desktop 部分，增加支持的平台数目
 >
 > TODO: 根据设定的关键词或者 examples 每日定时抓取可能会感兴趣的论文摘要
 >
