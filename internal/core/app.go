@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	storage "PaperHunter/db"
 	dbsqlite "PaperHunter/db/sqlite"
@@ -88,7 +89,7 @@ func (a *App) Close() error {
 }
 
 
-type CrawlProgress func(index int, total int, p *models.Paper)
+type CrawlProgress func(index int, total int, p *models.Paper, paperID int64)
 
 func (a *App) Crawl(ctx context.Context, platformName string, q platform.Query) (int, error) {
 	return a.CrawlWithProgress(ctx, platformName, q, nil)
@@ -128,9 +129,6 @@ func (a *App) CrawlWithProgress(ctx context.Context, platformName string, q plat
 		if p == nil {
 			continue
 		}
-		if progress != nil {
-			progress(i, total, p)
-		}
 		logger.Debug("[%d/%d] 保存论文: %s", i+1, len(res.Papers), p.Title)
 		pid, err := a.db.Upsert(p)
 		if err != nil {
@@ -138,6 +136,10 @@ func (a *App) CrawlWithProgress(ctx context.Context, platformName string, q plat
 			return count, fmt.Errorf("保存论文失败(%s): %w", p.URL, err)
 		}
 		count++
+
+		if progress != nil {
+			progress(i, total, p, pid)
+		}
 
 		if a.embedder != nil {
 			logger.Debug("生成向量: paper_id=%d, model=%s", pid, a.embedder.ModelName())
@@ -176,6 +178,39 @@ func (a *App) CountPapers(ctx context.Context, conditions []string, params []int
 func (a *App) DeletePapers(ctx context.Context, conditions []string, params []interface{}) (int, error) {
 	logger.Info("删除论文")
 	return a.db.DeletePapers(conditions, params)
+}
+
+// GetPapersByPairs 按 source+id 组合批量查询论文（不分页，limit=0 表示全部）
+func (a *App) GetPapersByPairs(ctx context.Context, pairs map[string][]string) ([]*models.Paper, error) {
+	if len(pairs) == 0 {
+		return []*models.Paper{}, nil
+	}
+
+	var conditionParts []string
+	var params []interface{}
+
+	for source, ids := range pairs {
+		if len(ids) == 0 {
+			continue
+		}
+		placeholders := make([]string, 0, len(ids))
+		for range ids {
+			placeholders = append(placeholders, "?")
+		}
+		conditionParts = append(conditionParts, fmt.Sprintf("(source = ? AND source_id IN (%s))", strings.Join(placeholders, ",")))
+		params = append(params, source)
+		for _, id := range ids {
+			params = append(params, id)
+		}
+	}
+
+	if len(conditionParts) == 0 {
+		return []*models.Paper{}, nil
+	}
+
+	conditions := []string{fmt.Sprintf("(%s)", strings.Join(conditionParts, " OR "))}
+
+	return a.db.GetPapersByConditions(conditions, params, 0)
 }
 
 func (a *App) GetPapers(ctx context.Context, page, pageSize int, conditions []string, params []interface{}, orderBy string) ([]*models.Paper, int, error) {

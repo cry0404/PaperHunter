@@ -62,6 +62,15 @@ type CrawlHistory struct {
 	EndTime   time.Time              `json:"end_time"`
 }
 
+// PersistedTask 用于任务持久化到磁盘
+type PersistedTask struct {
+	TaskID    string     `json:"task_id"`
+	Platform  string     `json:"platform"`
+	Inserted  []PaperRef `json:"inserted"`
+	StartTime time.Time  `json:"start_time"`
+	EndTime   time.Time  `json:"end_time"`
+}
+
 // CrawlService 爬取服务
 type CrawlService struct {
 	tasks map[string]*CrawlTask
@@ -287,6 +296,7 @@ func (cs *CrawlService) saveTaskHistory(task *CrawlTask) {
 	}
 
 	cs.truncateHistoryFile(10)
+	cs.persistTask(task)
 }
 
 // loadHistory 读取历史记录，limit=0 表示全部
@@ -346,6 +356,61 @@ func (cs *CrawlService) clearHistory() error {
 		return err
 	}
 	return nil
+}
+
+// taskDataPath 任务持久化文件路径
+func (cs *CrawlService) taskDataPath(taskID string) string {
+	dir := filepath.Dir(cs.historyPath())
+	return filepath.Join(dir, fmt.Sprintf("%s.json", taskID))
+}
+
+// persistTask 将任务的插入记录持久化
+func (cs *CrawlService) persistTask(task *CrawlTask) {
+	if task == nil || task.Status != "completed" || len(task.Inserted) == 0 || task.EndTime == nil {
+		return
+	}
+	data, err := json.Marshal(PersistedTask{
+		TaskID:    task.ID,
+		Platform:  task.Platform,
+		Inserted:  task.Inserted,
+		StartTime: task.StartTime,
+		EndTime:   *task.EndTime,
+	})
+	if err != nil {
+		logger.Warn("持久化任务失败(序列化): %v", err)
+		return
+	}
+	path := cs.taskDataPath(task.ID)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		logger.Warn("持久化任务失败(创建目录): %v", err)
+		return
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		logger.Warn("持久化任务失败(写文件): %v", err)
+	}
+}
+
+// loadPersistedTask 从磁盘读取任务数据（仅包含插入记录等）
+func (cs *CrawlService) loadPersistedTask(taskID string) (*PersistedTask, error) {
+	path := cs.taskDataPath(taskID)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var t PersistedTask
+	if err := json.Unmarshal(data, &t); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// loadTaskRefsFromDisk 读取任务插入记录引用
+func (cs *CrawlService) loadTaskRefsFromDisk(taskID string) ([]PaperRef, error) {
+	t, err := cs.loadPersistedTask(taskID)
+	if err != nil {
+		return nil, err
+	}
+	return t.Inserted, nil
 }
 
 // addLog 添加日志

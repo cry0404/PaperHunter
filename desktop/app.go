@@ -341,7 +341,16 @@ func (a *App) ExportCrawlTask(taskID string, format string, output string, feish
 	}
 	task, err := a.crawlService.GetTask(taskID)
 	if err != nil {
-		return "", err
+		// 尝试从持久化文件加载
+		if t, perr := a.crawlService.loadPersistedTask(taskID); perr == nil {
+			task = &CrawlTask{
+				ID:       t.TaskID,
+				Platform: t.Platform,
+				Inserted: t.Inserted,
+			}
+		} else {
+			return "", err
+		}
 	}
 	if len(task.Inserted) == 0 {
 		return "", fmt.Errorf("no papers recorded for task: %s", taskID)
@@ -407,7 +416,16 @@ func (a *App) GetCrawlTaskPapers(taskID string) (string, error) {
 	}
 	task, err := a.crawlService.GetTask(taskID)
 	if err != nil {
-		return "", err
+		// 尝试从持久化文件加载
+		if t, perr := a.crawlService.loadPersistedTask(taskID); perr == nil {
+			task = &CrawlTask{
+				ID:       t.TaskID,
+				Platform: t.Platform,
+				Inserted: t.Inserted,
+			}
+		} else {
+			return "", err
+		}
 	}
 	if len(task.Inserted) == 0 {
 		return "[]", nil
