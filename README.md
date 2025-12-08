@@ -6,7 +6,7 @@
 
 **多平台学术论文爬取与语义搜索工具**
 
-![主页面](./img/image-20251129222357850.png)
+![主页面](./img/paperhunter.png)
 
 [![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
 
@@ -61,12 +61,25 @@ PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜�
 
 ### 配置
 
-1. 启动应用。
-2. 进入 **Settings** 页面。
-3. 配置 **Embedder API Key**（用于语义搜索和推荐功能）：
-   - 支持 OpenAI 格式的 API（如 SiliconFlow, DeepSeek 等）。
-   - 设置 BaseURL, API Key, Model Name 等参数。
-4. (可选) 配置其他平台参数（如 OpenReview 会议 ID、代理设置等）。
+1. 启动应用，进入 **Settings** 页面。
+2. **Embedding / LLM（必填）**
+   - BaseURL：兼容 OpenAI 格式的推理/向量地址（如 SiliconFlow / DeepSeek）。
+   - API Key：对应服务的密钥。
+   - ModelName：例如 `text-embedding-3-small`（向量）或 `gpt-4o-mini`（LLM）。
+3. **数据库**
+   - Path：本地数据文件路径（默认 `~/.quicksearch/quicksearch.db`）。
+4. **Zotero（可选，用于 Zotero 导出/每日推荐种子）**
+   - User ID：Zotero 个人或群组 ID。
+   - API Key：Zotero 生成的 API Key。
+   - Library Type：`user` 或 `group`。
+5. **飞书（可选，用于导出到多维表格）**
+   - App ID / App Secret：在飞书开放平台创建自建应用后获取。
+6. **平台配置（Settings 页内）**
+   - 代理：如果需要通过代理访问（如 OpenReview / SSRN），在系统代理中配置并在平台设置中开启。
+   - 超时时间：根据网络情况调整。
+   - ACL：可切换 `Use RSS`（默认，最新 1000 篇）或 `Use BibTeX`（全量，含摘要）。
+   - OpenReview：填写 Venue ID（例如 `ICLR.cc/2026/Conference/Submission`）。
+7. 保存设置后再进行爬取/推荐/搜索。
 
 ### 功能概览
 
