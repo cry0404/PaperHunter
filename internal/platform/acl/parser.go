@@ -113,17 +113,16 @@ func (a *Adapter) convertRSSItemToPaper(item RSSItem) *models.Paper {
 		UpdatedAt: time.Now(),
 	}
 
-	// 生成 SourceID - 使用标题哈希确保唯一性
+
 	if paper.Title != "" {
-		// 使用标题生成哈希值
+
 		titleHash := a.generateTitleHash(paper.Title)
 		paper.SourceID = fmt.Sprintf("acl_rss_%s", titleHash)
 	} else {
-		// 如果标题为空，使用时间戳
+
 		paper.SourceID = fmt.Sprintf("acl_rss_%d", time.Now().UnixNano())
 	}
 
-	// 如果 URL 为空，生成唯一的 URL
 	if paper.URL == "" {
 		paper.URL = fmt.Sprintf("https://aclanthology.org/%s", paper.SourceID)
 	}
@@ -360,17 +359,17 @@ func (a *Adapter) extractMultiLineBibTeXValue(lines []string, startLine int) str
 		}
 
 		if inQuotes {
-			// 处理双引号格式
+
 			quoteCount += strings.Count(line, "\"")
 			if quoteCount%2 == 0 {
-				// 找到结束引号
+
 				value.WriteString(strings.TrimSuffix(line, "\""))
 				break
 			} else {
 				value.WriteString(line)
 			}
 		} else {
-			// 处理大括号格式
+
 			braceCount += strings.Count(line, "{")
 			braceCount -= strings.Count(line, "}")
 
@@ -387,9 +386,8 @@ func (a *Adapter) extractMultiLineBibTeXValue(lines []string, startLine int) str
 	return value.String()
 }
 
-// generateTitleHash 生成标题的哈希值
 func (a *Adapter) generateTitleHash(title string) string {
-	// 清理标题，移除特殊字符
+
 	cleanTitle := strings.ToLower(title)
 	cleanTitle = strings.ReplaceAll(cleanTitle, " ", "_")
 	cleanTitle = strings.ReplaceAll(cleanTitle, ",", "")
@@ -409,12 +407,10 @@ func (a *Adapter) generateTitleHash(title string) string {
 	cleanTitle = strings.ReplaceAll(cleanTitle, "/", "_")
 	cleanTitle = strings.ReplaceAll(cleanTitle, "\\", "_")
 
-	// 限制长度并添加时间戳确保唯一性
 	if len(cleanTitle) > 30 {
 		cleanTitle = cleanTitle[:30]
 	}
 
-	// 添加时间戳确保唯一性
 	timestamp := time.Now().UnixNano() % 1000000 // 取后6位
 	return fmt.Sprintf("%s_%d", cleanTitle, timestamp)
 }
@@ -431,19 +427,20 @@ func (a *Adapter) matchesQuery(paper *models.Paper, q platform.Query) bool {
 		}
 	}
 
-	// 日期范围匹配
-	if q.DateFrom != "" {
-		if fromDate, err := time.Parse("2006-01-02", q.DateFrom); err == nil {
-			if paper.FirstSubmittedAt.Before(fromDate) {
-				return false
+	if !paper.FirstSubmittedAt.IsZero() {
+		if q.DateFrom != "" {
+			if fromDate, err := time.Parse("2006-01-02", q.DateFrom); err == nil {
+				if paper.FirstSubmittedAt.Before(fromDate) {
+					return false
+				}
 			}
 		}
-	}
 
-	if q.DateTo != "" {
-		if toDate, err := time.Parse("2006-01-02", q.DateTo); err == nil {
-			if paper.FirstSubmittedAt.After(toDate) {
-				return false
+		if q.DateTo != "" {
+			if toDate, err := time.Parse("2006-01-02", q.DateTo); err == nil {
+				if paper.FirstSubmittedAt.After(toDate) {
+					return false
+				}
 			}
 		}
 	}

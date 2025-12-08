@@ -327,7 +327,7 @@ const LogViewer: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div>
-                    <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('logs.title')}</CardTitle>
+                    <CardTitle className="text-2xl font-sans font-medium tracking-tight">{t('logs.title')} & {t('logs.activity')}</CardTitle>
                     <CardDescription className="text-base text-muted-foreground font-serif">{t('logs.subtitle')}</CardDescription>
                 </div>
               </div>
@@ -357,13 +357,7 @@ const LogViewer: React.FC = () => {
                             <Terminal className="w-4 h-4 mr-2" />
                             {t('logs.systemLogs')}
                         </TabsTrigger>
-                        <TabsTrigger 
-                            value="agent"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2 font-sans font-medium"
-                        >
-                            <Bot className="w-4 h-4 mr-2" />
-                            {t('logs.agentLogs')}
-                        </TabsTrigger>
+                       
                     </TabsList>
                 </div>
                 

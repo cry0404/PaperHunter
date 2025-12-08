@@ -100,7 +100,6 @@ func (s *Searcher) Search(ctx context.Context, opts SearchOptions) ([]*models.Si
 		return nil, fmt.Errorf("数据库检索失败: %w", err)
 	}
 
-	logger.Info("检索完成，返回 %d 篇相关论文", len(results))
 	return results, nil
 }
 

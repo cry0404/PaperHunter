@@ -4,6 +4,8 @@ import { GetDailyRecommendations } from '../../wailsjs/go/main/App';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import * as models from '../../wailsjs/go/models';
 
+const STORAGE_KEY = 'recommend_state_v1';
+
 // 定义类型
 export interface Paper {
   id?: string;
@@ -98,6 +100,50 @@ export const RecommendProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
+
+  // 初始载入：尝试从 localStorage 恢复上次的推荐状态
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed) {
+        setRecommendations(parsed.recommendations || []);
+        setMergedPapers(parsed.mergedPapers || []);
+        setAgentLogs(parsed.agentLogs || []);
+        setShowRecommendations(!!parsed.showRecommendations && (parsed.mergedPapers || []).length > 0);
+        setInterestQuery(parsed.interestQuery || '');
+        setDateFrom(parsed.dateFrom || '');
+        setDateTo(parsed.dateTo || '');
+        setLocalFilePath(parsed.localFilePath || '');
+        setUseLocalFile(!!parsed.useLocalFile);
+        setSelectedPapers(new Set<string>(parsed.selectedPapers || []));
+      }
+    } catch (e) {
+      console.warn('Failed to restore recommend state:', e);
+    }
+  }, []);
+
+  // 持久化：每次相关状态变更时保存
+  useEffect(() => {
+    const payload = {
+      recommendations,
+      mergedPapers,
+      agentLogs,
+      showRecommendations,
+      interestQuery,
+      dateFrom,
+      dateTo,
+      localFilePath,
+      useLocalFile,
+      selectedPapers: Array.from(selectedPapers),
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Failed to persist recommend state:', e);
+    }
+  }, [recommendations, mergedPapers, agentLogs, showRecommendations, interestQuery, dateFrom, dateTo, localFilePath, useLocalFile, selectedPapers]);
 
   // 监听后端流式日志
   useEffect(() => {

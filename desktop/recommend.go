@@ -116,7 +116,7 @@ func (a *App) analyzeUserIntent(opts RecommendOptions, dateFrom, dateTo string, 
 		}
 	}
 
-	// 关键词预检：限定 arXiv，TopK=keywordTopK
+
 	var hydeInput = userQuery
 	if a.coreApp != nil {
 		cond := models.SearchCondition{
@@ -129,12 +129,18 @@ func (a *App) analyzeUserIntent(opts RecommendOptions, dateFrom, dateTo string, 
 			Query:     userQuery,
 			Condition: cond,
 			TopK:      keywordTopK,
-			Semantic:  false,
+			Semantic:  true,
 		}
 
 		results, err := a.coreApp.Search(ctx, searchOpts)
 		if err != nil {
-			logger.Warn("关键词预检失败，使用原始查询作为 HyDE 输入: %v", err)
+			// 如果 embedding 未配置或失败，降级为关键词检索以保证可用性
+			logger.Warn("语义预检失败，回退关键词检索: %v", err)
+			searchOpts.Semantic = false
+			results, err = a.coreApp.Search(ctx, searchOpts)
+		}
+		if err != nil {
+			logger.Warn("预检失败，使用原始查询作为 HyDE 输入: %v", err)
 		} else if len(results) > 0 {
 			builder := strings.Builder{}
 			builder.WriteString("User query: ")
@@ -152,11 +158,11 @@ func (a *App) analyzeUserIntent(opts RecommendOptions, dateFrom, dateTo string, 
 		}
 	}
 
-	// 使用 HyDE 服务生成虚拟论文
+
 	generatedTitle, generatedAbstract, err := a.generateHypotheticalPaperWithHyDE(hydeInput)
 	if err != nil {
 		logger.Warn("HyDE 生成失败，请根据日志调整: %v", err)
-		// 回退到简单方案
+
 		return nil, logs, nil
 	}
 
