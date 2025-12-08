@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"PaperHunter/internal/core"
+	"PaperHunter/internal/models"
 	"PaperHunter/pkg/logger"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -43,35 +45,17 @@ type RecommendResult struct {
 	AgentLogs       []AgentLogEntry       `json:"agentLogs"`
 }
 
-// UserIntent 简化的用户意图分析结果
+
 type UserIntent struct {
 	GeneratedTitle    string `json:"generated_title"`
 	GeneratedAbstract string `json:"generated_abstract"`
 }
 
-// logAndEmit 辅助函数：记录日志并发送事件
+
 func (a *App) logAndEmit(log AgentLogEntry) {
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "agent-log", log)
 	}
-}
-
-// analyzeUserIntent 使用 HyDE 分析用户意图并生成虚拟论文
-func (a *App) analyzeUserIntent(userQuery string) (*UserIntent, error) {
-	logger.Info("分析用户意图 (HyDE): %s", userQuery)
-
-	// 使用 HyDE 服务生成虚拟论文
-	generatedTitle, generatedAbstract, err := a.generateHypotheticalPaperWithHyDE(userQuery)
-	if err != nil {
-		logger.Warn("HyDE 生成失败，请根据日志调整: %v", err)
-		// 回退到简单方案
-		return nil, nil
-	}
-
-	return &UserIntent{
-		GeneratedTitle:    generatedTitle,
-		GeneratedAbstract: generatedAbstract,
-	}, nil
 }
 
 // generateHypotheticalPaperWithHyDE 使用 HyDE 服务生成虚拟论文
@@ -109,6 +93,101 @@ func (a *App) generateHypotheticalPaperWithHyDE(userQuery string) (string, strin
 	return paper.Title, paper.Abstract, nil
 }
 
+// analyzeUserIntent 使用 HyDE，并优先利用关键词检索得到的 topK 文章上下文
+func (a *App) analyzeUserIntent(opts RecommendOptions, dateFrom, dateTo string, keywordTopK int) (*UserIntent, []AgentLogEntry, error) {
+	logs := make([]AgentLogEntry, 0)
+	userQuery := strings.TrimSpace(opts.InterestQuery)
+	if userQuery == "" {
+		return nil, logs, nil
+	}
+
+	logger.Info("分析用户意图 (HyDE with keyword topK=%d): %s", keywordTopK, userQuery)
+
+	ctx := context.Background()
+
+	// 根据已经下载的，先选取最相近的几篇生成的 hyde 做推荐
+	var fromDate, toDatePtr *time.Time
+	if dateFrom != "" {
+		if from, err := time.Parse("2006-01-02", dateFrom); err == nil {
+			tmp := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+			fromDate = &tmp
+		}
+	}
+	if dateTo != "" {
+		if to, err := time.Parse("2006-01-02", dateTo); err == nil {
+			tmp := time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 999999999, to.Location())
+			toDatePtr = &tmp
+		}
+	}
+
+	// 关键词预检：限定 arXiv，TopK=keywordTopK
+	var hydeInput = userQuery
+	if a.coreApp != nil {
+		cond := models.SearchCondition{
+			Limit:    keywordTopK,
+			Sources:  []string{"arxiv"},
+			DateFrom: fromDate,
+			DateTo:   toDatePtr,
+		}
+		searchOpts := core.SearchOptions{
+			Query:     userQuery,
+			Condition: cond,
+			TopK:      keywordTopK,
+			Semantic:  false,
+		}
+
+		results, err := a.coreApp.Search(ctx, searchOpts)
+		if err != nil {
+			logger.Warn("关键词预检失败，使用原始查询作为 HyDE 输入: %v", err)
+		} else if len(results) > 0 {
+			builder := strings.Builder{}
+			builder.WriteString("User query: ")
+			builder.WriteString(userQuery)
+			builder.WriteString("\n\nTop related arXiv papers (title + abstract):\n")
+			for i, sp := range results {
+				if i >= keywordTopK {
+					break
+				}
+				builder.WriteString(fmt.Sprintf("%d) %s\n", i+1, strings.TrimSpace(sp.Paper.Title)))
+				builder.WriteString(truncateText(strings.TrimSpace(sp.Paper.Abstract), 800))
+				builder.WriteString("\n\n")
+			}
+			hydeInput = builder.String()
+		}
+	}
+
+	// 使用 HyDE 服务生成虚拟论文
+	generatedTitle, generatedAbstract, err := a.generateHypotheticalPaperWithHyDE(hydeInput)
+	if err != nil {
+		logger.Warn("HyDE 生成失败，请根据日志调整: %v", err)
+		// 回退到简单方案
+		return nil, logs, nil
+	}
+
+	intent := &UserIntent{
+		GeneratedTitle:    generatedTitle,
+		GeneratedAbstract: generatedAbstract,
+	}
+
+	logs = append(logs, AgentLogEntry{
+		Type:      "tool_result",
+		Content:   fmt.Sprintf("Generated paper (HyDE with top%d): %s\n%s", keywordTopK, generatedTitle, generatedAbstract),
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+
+	return intent, logs, nil
+}
+
+func truncateText(text string, maxLen int) string {
+	if maxLen <= 0 {
+		return ""
+	}
+	if len(text) <= maxLen {
+		return text
+	}
+	return text[:maxLen] + "..."
+}
+
 // GetDailyRecommendations 获取每日推荐
 func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 	logger.Info("开始获取每日推荐 - 兴趣: %s", opts.InterestQuery)
@@ -131,19 +210,7 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 	}
 
 
-	intent, err := a.analyzeUserIntent(opts.InterestQuery)
-	if err != nil {
-		logger.Error("意图分析失败: %v", err)
-		return "", fmt.Errorf("intent analysis failed: %w", err)
-	}
-
-	agentLogs = append(agentLogs, AgentLogEntry{
-		Type:      "tool_result",
-		Content:   fmt.Sprintf("Generated paper: %s\n%s", intent.GeneratedTitle, intent.GeneratedAbstract),
-		Timestamp: time.Now().Format(time.RFC3339),
-	})
-
-	result, err := a.getDailyRecommendationsDirect(opts, agentLogs, intent)
+	result, err := a.getDailyRecommendationsDirect(opts, agentLogs)
 	if err != nil {
 		// 记录错误
 		agentLogs = append(agentLogs, AgentLogEntry{

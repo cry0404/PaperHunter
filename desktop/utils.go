@@ -9,13 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"PaperHunter/config"
 	"PaperHunter/desktop/memory"
 	"PaperHunter/internal/models"
 	"PaperHunter/pkg/logger"
 )
 
 // getDailyRecommendationsDirect
-func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []AgentLogEntry, intent *UserIntent) (string, error) {
+func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []AgentLogEntry) (string, error) {
 	topK := opts.TopK
 	if topK <= 0 {
 		topK = 5
@@ -63,15 +64,25 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 		}
 	}
 
+	// HyDE 意图分析：先使用关键词 topK=5（标题+摘要）作为上下文
+	const hydeKeywordTopK = 5
+	intent, intentLogs, _ := a.analyzeUserIntent(opts, dateFrom, dateTo, hydeKeywordTopK)
+	if len(intentLogs) > 0 {
+		agentLogs = append(agentLogs, intentLogs...)
+	}
+
 	var seeds []*models.Paper
 
-	zoteroPapers, err := getZoteroPapers(opts.ZoteroCollection, 50)
-	if err != nil {
-
-		logger.Warn("从 Zotero 获取论文失败: %v", err)
+	cfg := config.Get()
+	if cfg != nil && cfg.Zotero.UserID != "" && cfg.Zotero.APIKey != "" {
+		zoteroPapers, err := getZoteroPapers(opts.ZoteroCollection, 50)
+		if err != nil {
+			logger.Warn("从 Zotero 获取论文失败: %v", err)
+		} else {
+			seeds = append(seeds, zoteroPapers...)
+		}
 	} else {
-		seeds = append(seeds, zoteroPapers...)
-
+		logger.Info("Zotero 未配置，跳过 Zotero 种子论文")
 	}
 
 	if intent != nil && intent.GeneratedTitle != "" && intent.GeneratedAbstract != "" {
@@ -250,7 +261,6 @@ func (a *App) getDailyRecommendationsDirect(opts RecommendOptions, agentLogs []A
 	logger.Debug("返回的 JSON 数据长度: %d 字节", len(data))
 	logger.Debug("返回的 JSON 数据预览: %s", string(data)[:min(500, len(data))])
 
-	// 记录推荐事件到记忆，用于后续去重与画像
 	if mem != nil && totalRecommended > 0 {
 		var evs []memory.Event
 		for _, group := range output.Recommendations {

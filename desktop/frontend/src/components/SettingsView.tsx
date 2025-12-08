@@ -300,7 +300,7 @@ const SettingsView: React.FC = () => {
                     })
                   )}
                   className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                  placeholder="data/quicksearch.db"
+                  placeholder="~/.quicksearch/quicksearch.db"
                 />
               </div>
             </div>
