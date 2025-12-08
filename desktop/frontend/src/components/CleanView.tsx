@@ -80,17 +80,17 @@ const CleanView: React.FC = () => {
             {/* 筛选条件卡片 */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2">
-                <Filter className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-sans font-medium">{t('clean.filters')}</h3>
+                <Filter className="w-5 h-5 text-anthropic-orange" />
+                <h3 className="text-lg font-sans font-medium text-foreground">{t('clean.filters')}</h3>
               </div>
               
-              <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="p-6 rounded-xl border border-border/60 bg-card/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-sans">
+                  <Label className="flex items-center gap-2 font-sans text-foreground">
                     {t('clean.source')}
                   </Label>
                   <Select value={source} onValueChange={(v:any)=>setSource(v)}>
-                    <SelectTrigger className="bg-background">
+                    <SelectTrigger className="bg-background border-border">
                       <SelectValue placeholder={t('clean.allSources')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -104,25 +104,25 @@ const CleanView: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-sans">
+                  <Label className="flex items-center gap-2 font-sans text-foreground">
                     {t('clean.startDate')}
                   </Label>
-                  <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} className="bg-background font-sans" />
+                  <Input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} className="bg-background border-border font-sans" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-sans">
+                  <Label className="flex items-center gap-2 font-sans text-foreground">
                      {t('clean.endDate')}
                   </Label>
-                  <Input type="date" value={until} onChange={(e)=>setUntil(e.target.value)} className="bg-background font-sans" />
+                  <Input type="date" value={until} onChange={(e)=>setUntil(e.target.value)} className="bg-background border-border font-sans" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 font-sans">
+                  <Label className="flex items-center gap-2 font-sans text-foreground">
                      {t('clean.options')}
                   </Label>
                   <div className="h-10 flex items-center">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors font-sans">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-anthropic-orange transition-colors font-sans text-foreground">
                       <Checkbox checked={withoutEmbed} onCheckedChange={(v:boolean)=>setWithoutEmbed(v)} />
                       <span>{t('clean.missingEmbeddings')}</span>
                     </label>
@@ -131,27 +131,27 @@ const CleanView: React.FC = () => {
               </div>
             </div>
 
-            <Separator className="bg-border/40" />
+            <Separator className="bg-border/60" />
 
             {/* 导出选项卡片 */}
             <div className="space-y-4">
                <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <FileOutput className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-sans font-medium">{t('clean.backup')}</h3>
+                  <FileOutput className="w-5 h-5 text-anthropic-orange" />
+                  <h3 className="text-lg font-sans font-medium text-foreground">{t('clean.backup')}</h3>
                 </div>
-                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors font-sans">
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-anthropic-orange transition-colors font-sans text-foreground">
                   <Checkbox checked={exportBefore} onCheckedChange={(v:boolean)=>setExportBefore(v)} />
                   <span className="font-medium">{t('clean.backupCheck')}</span>
                 </label>
               </div>
 
-              <div className={`p-6 rounded-xl border border-border/40 bg-card/30 transition-all duration-300 ${!exportBefore ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className={`p-6 rounded-xl border border-border/60 bg-card/50 transition-all duration-300 ${!exportBefore ? 'opacity-90 pointer-events-none' : ''}`}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="font-sans">{t('clean.format')}</Label>
+                    <Label className="font-sans text-foreground">{t('clean.format')}</Label>
                     <Select value={exportFormat} onValueChange={(v:any)=>setExportFormat(v)} disabled={!exportBefore}>
-                      <SelectTrigger className="bg-background">
+                      <SelectTrigger className="bg-background border-border">
                         <SelectValue placeholder="Select Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -161,13 +161,13 @@ const CleanView: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-sans">{t('clean.filename')}</Label>
+                    <Label className="font-sans text-foreground">{t('clean.filename')}</Label>
                     <Input 
                       value={exportOutput} 
                       onChange={(e)=>setExportOutput(e.target.value)} 
                       placeholder="backup/clean_backup.csv" 
                       disabled={!exportBefore}
-                      className="bg-background font-mono text-sm"
+                      className="bg-background border-border font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground font-sans">Saved relative to app directory</p>
                   </div>

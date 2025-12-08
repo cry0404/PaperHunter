@@ -423,13 +423,13 @@ const SettingsView: React.FC = () => {
               <div className="flex items-center gap-2 mb-2">
                 <BookMarked className="w-5 h-5 text-primary" />
                 <h3 className="text-lg font-sans font-medium text-foreground">
-                  {t('zotero.title')}
+                  {t('settings.zotero.title')}
                 </h3>
               </div>
               <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
                 <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.userId')}</label>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('settings.zotero.userId')}</label>
                     <input
                       type="text"
                       value={config.Zotero?.UserID || ''}
@@ -449,7 +449,7 @@ const SettingsView: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.libraryType')}</label>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('settings.zotero.libraryType')}</label>
                     <select
                       value={config.Zotero?.LibraryType || 'user'}
                       onChange={(e) => setConfig(
@@ -465,14 +465,14 @@ const SettingsView: React.FC = () => {
                       )}
                       className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                     >
-                      <option value="user">{t('zotero.user')}</option>
-                      <option value="group">{t('zotero.group')}</option>
+                      <option value="user">{t('settings.zotero.user')}</option>
+                      <option value="group">{t('settings.zotero.group')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.apiKey')}</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.zotero.apiKey')}</label>
                   <input
                     type="password"
                     value={config.Zotero?.APIKey || ''}
@@ -501,12 +501,12 @@ const SettingsView: React.FC = () => {
               <div className="flex items-center gap-2 mb-2">
                 <Share2 className="w-5 h-5 text-primary" />
                 <h3 className="text-lg font-sans font-medium text-foreground">
-                  {t('feishu.title')}
+                  {t('settings.feishu.title')}
                 </h3>
               </div>
               <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
                 <div>
-                  <label className="text-sm font-medium block mb-2 font-sans">{t('feishu.appId')}</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.feishu.appId')}</label>
                   <input
                     type="text"
                     value={config.FeiShu?.AppID || ''}
@@ -526,7 +526,7 @@ const SettingsView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium block mb-2 font-sans">{t('feishu.appSecret')}</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.feishu.appSecret')}</label>
                   <input
                     type="password"
                     value={config.FeiShu?.AppSecret || ''}

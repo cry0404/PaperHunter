@@ -210,5 +210,88 @@
     "loading": "加载中...",
     "cancel": "取消",
     "confirm": "确认"
+  },
+  "about": {
+    "title": "关于",
+    "subtitle": "关于 PaperHunter 及其组件的信息。",
+    "desc": "您的 AI 科研助手",
+    "github": "GitHub",
+    "aboutTitle": "关于 PaperHunter",
+    "aboutContent": "PaperHunter 是一款 AI 驱动的研究助手，旨在帮助研究人员高效地查找、组织和分析学术论文。",
+    "zoteroTitle": "Zotero 集成",
+    "zoteroContent": "与您的 Zotero 文献库无缝同步，管理您的参考文献和引用。",
+    "embeddingTitle": "向量嵌入",
+    "embeddingContent": "使用先进的嵌入模型提供语义搜索功能。",
+    "feishuTitle": "飞书集成",
+    "feishuContent": "将您的研究发现导出到飞书多维表格，以便进行协作分析。注意：这里需要提供 app_id 与 app_secret，请自行于 https://openfeishu.cn 配置"
+  },
+  "logs": {
+    "title": "日志",
+    "subtitle": "查看系统和智能体活动日志。",
+    "activity": "活动",
+    "noTask": "未选择活动任务。",
+    "crawling": "爬取中",
+    "completed": "已完成",
+    "totalPapers": "总论文数: {{count}}",
+    "refresh": "刷新",
+    "searchPlaceholder": "搜索日志...",
+    "filter": "过滤",
+    "logLevel": "日志级别",
+    "globalLevel": "全局日志级别",
+    "autoScroll": "自动滚动",
+    "autoRefresh": "自动刷新",
+    "noLogs": "未找到日志。",
+    "totalLogs": "共 {{count}} 条",
+    "showingLogs": "显示: {{count}}",
+    "crawlingStatus": "爬取进行中...",
+    "live": "实时",
+    "entries": "条记录",
+    "clearSystem": "清除系统日志",
+    "systemLogs": "系统日志",
+    "agentLogs": "智能体日志",
+    "clearDialog": {
+      "title": "清除日志？",
+      "desc": "此操作将永久删除所有系统日志，无法撤销。"
+    },
+    "system": {
+      "noLogs": "暂无系统日志。"
+    },
+    "agent": {
+      "noLogs": "暂无智能体活动。",
+      "start": "开始推荐任务以查看智能体日志。"
+    }
+  },
+  "exportView": {
+    "subtitle": "配置您的导出设置",
+    "selectFormat": "选择格式",
+    "feishu": "飞书多维表格",
+    "outputPathPlaceholder": "papers/export.csv",
+    "feishuNamePlaceholder": "我的论文调研",
+    "zoteroPlaceholder": "Collection Key (可选)",
+    "source": "来源",
+    "allPlatforms": "所有平台",
+    "all": "全部",
+    "limit": "数量限制",
+    "limitPlaceholder": "0 表示全部",
+    "query": "查询",
+    "queryPlaceholder": "搜索标题/摘要",
+    "keywords": "关键词",
+    "categories": "分类",
+    "exporting": "导出中...",
+    "validation": {
+      "invalid": "输入无效",
+      "outputRequired": "必须填写输出路径",
+      "feishuNameRequired": "必须填写飞书表格名称"
+    },
+    "success": {
+      "title": "导出成功",
+      "feishu": "已导出到飞书：",
+      "saved": "已保存到：",
+      "operation": "导出操作完成"
+    },
+    "failure": {
+      "title": "导出失败",
+      "desc": "请查看日志了解详情"
+    }
   }
 }

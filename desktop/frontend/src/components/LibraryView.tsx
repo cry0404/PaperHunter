@@ -435,17 +435,16 @@ const LibraryView: React.FC = () => {
     return (
         <div className="flex flex-col h-full overflow-hidden animate-fade-in">
              <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-                <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
+                <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-8 flex-shrink-0">
                     <div className="flex items-center justify-between">
                          <div className="space-y-1">
                             <div className="flex items-center gap-3">
-                               
-                                <CardTitle className="text-3xl font-display font-semibold">{t('library.title')}</CardTitle>
-                                <Badge variant="outline" className="ml-2">
+                                <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('library.title')}</CardTitle>
+                                <Badge variant="outline" className="ml-2 font-sans">
                                     {mode === 'semantic' ? t('library.semanticSearch') : t('library.standardView')}
                                 </Badge>
                             </div>
-                             <CardDescription className="text-base text-muted-foreground ml-13">
+                            <CardDescription className="text-base text-muted-foreground font-serif">
                                 {taskId ? t('library.taskViewDesc') : t('library.defaultDesc')}
                             </CardDescription>
                          </div>
@@ -454,6 +453,7 @@ const LibraryView: React.FC = () => {
                                 variant={mode === 'semantic' ? "secondary" : "ghost"}
                                 size="sm" 
                                 onClick={toggleMode}
+                                className="font-sans"
                             >
                                 {mode === 'semantic' ? t('library.switchToStandard') : t('library.switchToSemantic')}
                             </Button>
@@ -461,11 +461,11 @@ const LibraryView: React.FC = () => {
                             <Button variant="outline" size="sm" onClick={() => {
                                 if (mode === 'semantic') handleSemanticSearch();
                                 else fetchPapers();
-                            }} disabled={loading}>
+                            }} disabled={loading} className="font-sans">
                                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                                 {t('library.refresh')}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={handleExport} disabled={selectedPapers.length === 0}>
+                            <Button variant="outline" size="sm" onClick={handleExport} disabled={selectedPapers.length === 0} className="font-sans">
                                 <Download className="w-4 h-4 mr-2" />
                                 {t('library.export')} ({selectedPapers.length})
                             </Button>
@@ -475,7 +475,7 @@ const LibraryView: React.FC = () => {
 
                 <CardContent className="flex-1 overflow-hidden p-0 flex flex-col">
 
-                    <div className="p-4 border-b border-border/30 bg-card/10 flex flex-col gap-4">
+                    <div className="p-4 border-b border-border/30 bg-card/30 flex flex-col gap-4">
                         <div className="flex gap-4 items-center">
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -573,12 +573,12 @@ const LibraryView: React.FC = () => {
                                             onCheckedChange={handleSelectAll}
                                         />
                                     </TableHead>
-                                    <TableHead className="w-[40%]">{t('library.table.title')}</TableHead>
-                                    <TableHead className="w-[20%]">{t('library.table.authors')}</TableHead>
-                                    <TableHead className="w-[10%]">{t('library.table.source')}</TableHead>
-                                    <TableHead className="w-[12%]">{t('library.table.date')}</TableHead>
-                                    {mode === 'semantic' && <TableHead className="w-[10%]">{t('library.table.similarity')}</TableHead>}
-                                    <TableHead className="w-[8%] text-right pr-6">{t('library.table.actions')}</TableHead>
+                                    <TableHead className="w-[40%] font-sans">{t('library.table.title')}</TableHead>
+                                    <TableHead className="w-[20%] font-sans">{t('library.table.authors')}</TableHead>
+                                    <TableHead className="w-[10%] font-sans">{t('library.table.source')}</TableHead>
+                                    <TableHead className="w-[12%] font-sans">{t('library.table.date')}</TableHead>
+                                    {mode === 'semantic' && <TableHead className="w-[10%] font-sans">{t('library.table.similarity')}</TableHead>}
+                                    <TableHead className="w-[8%] text-right pr-6 font-sans">{t('library.table.actions')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -604,7 +604,7 @@ const LibraryView: React.FC = () => {
                                                 />
                                             </TableCell>
                                             <TableCell className="py-3">
-                                                <div className="font-medium text-base leading-tight mb-1 line-clamp-2 group-hover:text-primary transition-colors" title={paper.Title}>
+                                                <div className="font-sans font-medium text-base leading-tight mb-1 line-clamp-2 group-hover:text-primary transition-colors" title={paper.Title}>
                                                     {paper.Title}
                                                 </div>
                                             </TableCell>
@@ -615,11 +615,11 @@ const LibraryView: React.FC = () => {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="py-3">
-                                                <Badge variant="secondary" className="uppercase text-[10px] tracking-wider font-semibold bg-secondary/50">
+                                                <Badge variant="secondary" className="uppercase text-[10px] tracking-wider font-sans font-semibold bg-secondary/50">
                                                     {paper.Source}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="py-3 text-sm text-muted-foreground whitespace-nowrap">
+                                            <TableCell className="py-3 text-sm text-muted-foreground whitespace-nowrap font-sans">
                                                 <div className="flex items-center gap-1">
                                                     <Calendar className="w-3 h-3 opacity-70" />
                                                     {formatDate(paper.FirstAnnouncedAt)}
@@ -656,8 +656,8 @@ const LibraryView: React.FC = () => {
 
 
                     {mode === 'basic' && (
-                        <div className="p-4 border-t border-border/30 bg-card/10 flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground">
+                        <div className="p-4 border-t border-border/30 bg-card/30 flex items-center justify-between">
+                            <div className="text-sm text-muted-foreground font-sans">
                                 {t('library.showing', { from: (page - 1) * pageSize + 1, to: Math.min(page * pageSize, total), total })}
                             </div>
                             <div className="flex items-center gap-2">
@@ -670,7 +670,7 @@ const LibraryView: React.FC = () => {
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </Button>
-                                <span className="text-sm font-medium min-w-[3rem] text-center">
+                                <span className="text-sm font-sans font-medium min-w-[3rem] text-center">
                                     {page} / {Math.ceil(total / pageSize) || 1}
                                 </span>
                                 <Button 
@@ -695,24 +695,24 @@ const LibraryView: React.FC = () => {
                         <>
                             <SheetHeader className="mb-6">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Badge variant="secondary" className="uppercase text-xs font-bold tracking-wider">
+                                    <Badge variant="secondary" className="uppercase text-xs font-sans font-bold tracking-wider">
                                         {selectedPaper.Source}
                                     </Badge>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className="text-sm text-muted-foreground font-sans">
                                         {formatDate(selectedPaper.FirstAnnouncedAt)}
                                     </span>
                                 </div>
-                                <SheetTitle className="text-2xl font-display leading-tight">
+                                <SheetTitle className="text-2xl font-sans font-medium leading-tight">
                                     {selectedPaper.Title}
                                 </SheetTitle>
                             </SheetHeader>
                             
                             <div className="space-y-6">
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.authors')}</h4>
+                                    <h4 className="text-sm font-sans font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.authors')}</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {selectedPaper.Authors?.map((author, i) => (
-                                            <Badge key={i} variant="outline" className="font-normal">
+                                            <Badge key={i} variant="outline" className="font-sans font-normal">
                                                 {author}
                                             </Badge>
                                         ))}
@@ -720,16 +720,16 @@ const LibraryView: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.abstract')}</h4>
-                                    <p className="text-sm leading-relaxed text-foreground/90 text-justify">
+                                    <h4 className="text-sm font-sans font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.abstract')}</h4>
+                                    <p className="text-sm font-serif leading-relaxed text-foreground/90 text-justify">
                                         {selectedPaper.Abstract}
                                     </p>
                                 </div>
 
                                 {selectedPaper.SourceID && (
                                     <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.id')}</h4>
-                                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                                        <h4 className="text-sm font-sans font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.id')}</h4>
+                                        <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
                                             {selectedPaper.SourceID}
                                         </code>
                                     </div>
@@ -738,11 +738,10 @@ const LibraryView: React.FC = () => {
                                 <Separator />
 
                                 <div className="flex gap-3">
-                                    <Button onClick={() => openPaper(selectedPaper.URL)} className="flex-1">
+                                    <Button onClick={() => openPaper(selectedPaper.URL)} className="flex-1 font-sans">
                                         <ExternalLink className="w-4 h-4 mr-2" />
                                         {t('library.readFullPaper')}
                                     </Button>
-                                    {/* Additional actions could go here */}
                                 </div>
                             </div>
                         </>
@@ -752,18 +751,18 @@ const LibraryView: React.FC = () => {
 
             {/* Export Dialog */}
             <AlertDialog open={exportOpen} onOpenChange={setExportOpen}>
-                <AlertDialogContent>
+                <AlertDialogContent className="font-sans">
                 <AlertDialogHeader>
-                    <AlertDialogTitle>{t('library.exportDialog.title')}</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogTitle className="font-sans">{t('library.exportDialog.title')}</AlertDialogTitle>
+                    <AlertDialogDescription className="font-serif">
                     {t('library.exportDialog.description')}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('export.format')}</Label>
+                    <Label className="text-sm font-sans font-medium">{t('export.format')}</Label>
                     <Select value={exportFormat} onValueChange={(v:any)=>setExportFormat(v)}>
-                        <SelectTrigger>
+                        <SelectTrigger className="font-sans">
                         <SelectValue placeholder="Select Format" />
                         </SelectTrigger>
                         <SelectContent>
@@ -777,26 +776,26 @@ const LibraryView: React.FC = () => {
 
                     {(exportFormat==='csv'||exportFormat==='json') && (
                     <div className="space-y-2">
-                        <Label>{t('export.outputPath')}</Label>
-                        <Input value={exportOutput} onChange={(e)=>setExportOutput(e.target.value)} placeholder="out/papers.csv or papers.json" />
+                        <Label className="font-sans">{t('export.outputPath')}</Label>
+                        <Input value={exportOutput} onChange={(e)=>setExportOutput(e.target.value)} placeholder="out/papers.csv or papers.json" className="font-mono text-sm" />
                     </div>
                     )}
                     {exportFormat==='zotero' && (
                     <div className="space-y-2">
-                        <Label>{t('export.collectionKey')}</Label>
-                        <Input value={exportCollection} onChange={(e)=>setExportCollection(e.target.value)} placeholder="e.g., ABC123XY" />
+                        <Label className="font-sans">{t('export.collectionKey')}</Label>
+                        <Input value={exportCollection} onChange={(e)=>setExportCollection(e.target.value)} placeholder="e.g., ABC123XY" className="font-mono text-sm" />
                     </div>
                     )}
                     {exportFormat==='feishu' && (
                     <div className="space-y-2">
-                        <Label>{t('export.feishuName')}</Label>
-                        <Input value={exportFeishuName} onChange={(e)=>setExportFeishuName(e.target.value)} placeholder="e.g., Papers Dataset" />
+                        <Label className="font-sans">{t('export.feishuName')}</Label>
+                        <Input value={exportFeishuName} onChange={(e)=>setExportFeishuName(e.target.value)} placeholder="e.g., Papers Dataset" className="font-sans" />
                     </div>
                     )}
                 </div>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmExport}>{t('common.confirm')}</AlertDialogAction>
+                    <AlertDialogCancel className="font-sans">{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmExport} className="font-sans">{t('common.confirm')}</AlertDialogAction>
                 </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

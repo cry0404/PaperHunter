@@ -86,23 +86,23 @@ const ExportView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-        <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
-          <CardTitle className="text-3xl font-display font-semibold">{t('export.title')}</CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
+        <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-8 flex-shrink-0">
+          <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('export.title')}</CardTitle>
+          <CardDescription className="text-base text-muted-foreground font-serif">
             {t('exportView.subtitle')}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto px-8 py-12">
+        <CardContent className="flex-1 overflow-y-auto px-8 py-8">
           <div className="max-w-4xl w-full space-y-8 mx-auto">
-            <div className="glass-card p-6 rounded-2xl space-y-6">
+            <div className="p-6 rounded-xl border border-border/40 bg-card/30 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t('exportView.selectFormat')}</Label>
+                  <Label className="font-sans">{t('exportView.selectFormat')}</Label>
                   <Select value={format} onValueChange={(v:any)=>setFormat(v)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="font-sans bg-background border border-border text-foreground">
                       <SelectValue placeholder={t('exportView.selectFormat')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -116,33 +116,33 @@ const ExportView: React.FC = () => {
 
                 {(format === 'csv' || format === 'json') && (
                   <div className="space-y-2">
-                    <Label>{t('export.outputPath')}</Label>
-                    <Input value={output} onChange={(e)=>setOutput(e.target.value)} placeholder={t('exportView.outputPathPlaceholder')} />
+                    <Label className="font-sans">{t('export.outputPath')}</Label>
+                    <Input value={output} onChange={(e)=>setOutput(e.target.value)} placeholder={t('exportView.outputPathPlaceholder')} className="bg-background border border-border text-foreground font-mono text-sm" />
                   </div>
                 )}
 
                 {format === 'feishu' && (
                   <div className="space-y-2">
-                    <Label>{t('export.feishuName')}</Label>
-                    <Input value={feishuName} onChange={(e)=>setFeishuName(e.target.value)} placeholder={t('exportView.feishuNamePlaceholder')} />
+                    <Label className="font-sans">{t('export.feishuName')}</Label>
+                    <Input value={feishuName} onChange={(e)=>setFeishuName(e.target.value)} placeholder={t('exportView.feishuNamePlaceholder')} className="bg-background border border-border text-foreground font-sans" />
                   </div>
                 )}
 
                 {format === 'zotero' && (
                   <div className="space-y-2">
-                    <Label>{t('export.collectionKey')}</Label>
-                    <Input value={collection} onChange={(e)=>setCollection(e.target.value)} placeholder={t('exportView.zoteroPlaceholder')} />
+                    <Label className="font-sans">{t('export.collectionKey')}</Label>
+                    <Input value={collection} onChange={(e)=>setCollection(e.target.value)} placeholder={t('exportView.zoteroPlaceholder')} className="bg-background border border-border text-foreground font-mono text-sm" />
                   </div>
                 )}
               </div>
 
-              <Separator className="bg-border/50" />
+              <Separator className="bg-border/40" />
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t('exportView.source')}</Label>
+                  <Label className="font-sans">{t('exportView.source')}</Label>
                   <Select value={source} onValueChange={(v:any)=>setSource(v)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="font-sans bg-background border border-border text-foreground">
                       <SelectValue placeholder={t('exportView.allPlatforms')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -155,28 +155,28 @@ const ExportView: React.FC = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('exportView.limit')}</Label>
-                  <Input type="number" value={limit} onChange={(e)=>setLimit(parseInt(e.target.value)||0)} placeholder={t('exportView.limitPlaceholder')} />
+                  <Label className="font-sans">{t('exportView.limit')}</Label>
+                  <Input type="number" value={limit} onChange={(e)=>setLimit(parseInt(e.target.value)||0)} placeholder={t('exportView.limitPlaceholder')} className="bg-background border border-border text-foreground font-sans" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('exportView.query')}</Label>
-                  <Input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder={t('exportView.queryPlaceholder')} />
+                  <Label className="font-sans">{t('exportView.query')}</Label>
+                  <Input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder={t('exportView.queryPlaceholder')} className="bg-background border border-border text-foreground font-sans" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{t('exportView.keywords')}</Label>
-                  <Input value={keywords} onChange={(e)=>setKeywords(e.target.value)} placeholder="transformer, attention" />
+                  <Label className="font-sans">{t('exportView.keywords')}</Label>
+                  <Input value={keywords} onChange={(e)=>setKeywords(e.target.value)} placeholder="transformer, attention" className="bg-background border border-border text-foreground font-sans" />
                 </div>
 
                 <div className="space-y-2 col-span-2">
-                  <Label>{t('exportView.categories')}</Label>
-                  <Input value={categories} onChange={(e)=>setCategories(e.target.value)} placeholder="cs.AI, cs.LG" />
+                  <Label className="font-sans">{t('exportView.categories')}</Label>
+                  <Input value={categories} onChange={(e)=>setCategories(e.target.value)} placeholder="cs.AI, cs.LG" className="bg-background border border-border text-foreground font-mono text-sm" />
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleExport} disabled={exporting} className="px-8">
+                <Button onClick={handleExport} disabled={exporting} className="px-8 font-sans bg-anthropic-dark text-anthropic-light hover:bg-anthropic-dark/90">
                   {exporting ? t('exportView.exporting') : t('export.confirm')}
                 </Button>
               </div>

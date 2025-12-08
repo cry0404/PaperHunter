@@ -480,11 +480,11 @@ const RecommendView: React.FC = () => {
         <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-8 flex-shrink-0">
           <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-3">
-              <CardTitle className="text-4xl font-sans font-medium tracking-tight text-foreground">
+              <CardTitle className="text-3xl font-sans font-medium tracking-tight text-foreground">
                 {t('recommend.title')}
               </CardTitle>
             </div>
-            <CardDescription className="text-lg text-muted-foreground font-serif leading-relaxed">
+            <CardDescription className="text-base text-muted-foreground font-serif leading-relaxed">
               {t('recommend.subtitle')}
             </CardDescription>
           </div>

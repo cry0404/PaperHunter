@@ -21,18 +21,16 @@ import (
 	zotero "PaperHunter/pkg/upload/zotero"
 )
 
-
 type ZoteroConfig struct {
-	UserID string `mapstructure:"user_id" yaml:"user_id"` 
-	APIKey string `mapstructure:"api_key" yaml:"api_key"` 
+	UserID      string `mapstructure:"user_id" yaml:"user_id"`
+	APIKey      string `mapstructure:"api_key" yaml:"api_key"`
+	LibraryType string `mapstructure:"library_type" yaml:"library_type"`
 }
-
 
 type FeiShuConfig struct {
-	AppID     string `mapstructure:"app_id" yaml:"app_id"`        
-	AppSecret string `mapstructure:"app_secret" yaml:"app_secret"` 
+	AppID     string `mapstructure:"app_id" yaml:"app_id"`
+	AppSecret string `mapstructure:"app_secret" yaml:"app_secret"`
 }
-
 
 var GlobalApp *App
 
@@ -88,13 +86,11 @@ func (a *App) Close() error {
 	return a.db.Close()
 }
 
-
 type CrawlProgress func(index int, total int, p *models.Paper, paperID int64)
 
 func (a *App) Crawl(ctx context.Context, platformName string, q platform.Query) (int, error) {
 	return a.CrawlWithProgress(ctx, platformName, q, nil)
 }
-
 
 func (a *App) CrawlWithProgress(ctx context.Context, platformName string, q platform.Query, progress CrawlProgress) (int, error) {
 	logger.Info("开始爬取平台: %s", platformName)
@@ -246,7 +242,6 @@ func (a *App) ExportPapers(ctx context.Context, format string, outputPath string
 		return fmt.Errorf("不支持的导出格式: %s", format)
 	}
 
-	// 执行导出
 	if err := exp.Export(papers, outputPath); err != nil {
 		return fmt.Errorf("导出失败: %w", err)
 	}
@@ -290,7 +285,6 @@ func (a *App) ExportToFeiShuBitable(ctx context.Context, fileName, folderName st
 		return fmt.Errorf("feishu 配置不完整，请在配置文件中设置 feishu.app_id 和 feishu.app_secret")
 	}
 
-
 	papers, err := a.db.GetPapersByConditions(conditions, params, limit)
 	if err != nil {
 		return fmt.Errorf("查询论文失败: %w", err)
@@ -301,7 +295,6 @@ func (a *App) ExportToFeiShuBitable(ctx context.Context, fileName, folderName st
 	}
 
 	logger.Info("找到 %d 篇论文待导出", len(papers))
-
 
 	tmpFile, err := os.CreateTemp("", "quicksearch_*.csv")
 	if err != nil {
@@ -371,7 +364,6 @@ func (a *App) ZoteroCfg() ZoteroConfig {
 	return a.zoteroCfg
 }
 
-
 func (a *App) GetPlatform(platformName string) (platform.Platform, error) {
 	prov, ok := Get(platformName)
 	if !ok {
@@ -386,7 +378,6 @@ func (a *App) GetPlatform(platformName string) (platform.Platform, error) {
 	return prov.New(pcfg)
 }
 
-
 func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, error) {
 	count := 0
 	for _, p := range papers {
@@ -399,7 +390,6 @@ func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, erro
 			continue
 		}
 		count++
-
 
 		if a.embedder != nil {
 			text := emb.BuildEmbeddingText(p)
@@ -415,7 +405,6 @@ func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, erro
 	}
 	return count, nil
 }
-
 
 func (a *App) FeishuCfg() FeiShuConfig {
 	return a.feishuCfg

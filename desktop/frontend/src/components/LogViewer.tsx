@@ -19,6 +19,7 @@ import {
 } from "./ui/alert-dialog";
 import { Trash2, Activity, MessageSquare, Terminal, User, Bot, Wrench, AlertTriangle } from "lucide-react";
 import { useRecommendContext } from "../context/RecommendContext";
+import { useTranslation } from "react-i18next";
 
 // --- System Log Types & Component ---
 
@@ -34,6 +35,7 @@ type FilterLevel = 'ALL' | 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 const SystemLogsView: React.FC<{
   onClear: () => void;
 }> = ({ onClear }) => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -115,25 +117,25 @@ const SystemLogsView: React.FC<{
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
        <div className="border-b border-border/30 px-6 py-3 bg-card/30 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors font-sans">
                   <Checkbox checked={autoRefresh} onCheckedChange={(c:boolean) => setAutoRefresh(c)} />
-                  <span>自动刷新</span>
+                  <span>{t('logs.autoRefresh')}</span>
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors font-sans">
                   <Checkbox checked={autoScroll} onCheckedChange={(c:boolean) => setAutoScroll(c)} />
-                  <span>自动滚动</span>
+                  <span>{t('logs.autoScroll')}</span>
                 </label>
               </div>
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Log Level:</span>
+                  <span className="text-sm font-medium font-sans">{t('logs.logLevel')}:</span>
                   <Select value={currentLogLevel} onValueChange={handleSetLogLevel}>
-                    <SelectTrigger className="w-[100px] h-8">
+                    <SelectTrigger className="w-[100px] h-8 bg-background font-sans">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -146,9 +148,9 @@ const SystemLogsView: React.FC<{
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Filter:</span>
+                  <span className="text-sm font-medium font-sans">{t('logs.filter')}:</span>
                   <Select value={filterLevel} onValueChange={(v) => setFilterLevel(v as FilterLevel)}>
-                    <SelectTrigger className="w-[100px] h-8">
+                    <SelectTrigger className="w-[100px] h-8 bg-background font-sans">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -168,9 +170,9 @@ const SystemLogsView: React.FC<{
           <ScrollArea className="h-full">
             <div className="p-6 space-y-1">
               {filteredLogs.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-12 text-muted-foreground font-serif">
                   <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>暂无系统日志</p>
+                  <p>{t('logs.system.noLogs')}</p>
                 </div>
               ) : (
                 filteredLogs.map((log, index) => (
@@ -179,10 +181,10 @@ const SystemLogsView: React.FC<{
                       <span className="text-muted-foreground text-xs whitespace-nowrap mt-0.5 opacity-70">
                         {log.timestamp}
                       </span>
-                      <Badge variant={getLevelBadgeVariant(log.level)} className="mt-0.5 h-5 px-1 text-[10px]">
+                      <Badge variant={getLevelBadgeVariant(log.level)} className="mt-0.5 h-5 px-1 text-[10px] font-sans">
                         {log.level}
                       </Badge>
-                      <span className="flex-1 break-all whitespace-pre-wrap">
+                      <span className="flex-1 break-all whitespace-pre-wrap font-mono text-foreground/90">
                         {log.message}
                       </span>
                     </div>
@@ -194,9 +196,9 @@ const SystemLogsView: React.FC<{
           </ScrollArea>
        </div>
        
-       <div className="border-t border-border/30 px-6 py-2 bg-card/30 text-xs text-muted-foreground flex justify-between items-center">
-          <span>Total: {filteredLogs.length} logs</span>
-          {autoRefresh && <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/> Live</span>}
+       <div className="border-t border-border/30 px-6 py-2 bg-card/30 text-xs text-muted-foreground flex justify-between items-center font-sans">
+          <span>{t('logs.totalLogs', { count: filteredLogs.length })}</span>
+          {autoRefresh && <span className="text-anthropic-green flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-anthropic-green animate-pulse"/> {t('logs.live')}</span>}
        </div>
     </div>
   );
@@ -205,6 +207,7 @@ const SystemLogsView: React.FC<{
 // --- Agent Log Component ---
 
 const AgentLogsView: React.FC = () => {
+  const { t } = useTranslation();
   const { agentLogs } = useRecommendContext();
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -241,6 +244,7 @@ const AgentLogsView: React.FC = () => {
   };
 
   const getLabel = (type: string) => {
+      // Could translate these too if needed
       switch (type) {
           case 'user': return 'User';
           case 'assistant': return 'Assistant';
@@ -252,16 +256,16 @@ const AgentLogsView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       <div className="border-b border-border/30 px-6 py-3 bg-card/30 backdrop-blur-sm flex-shrink-0 flex justify-between items-center">
          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="h-6">
-                {agentLogs.length} Entries
+            <Badge variant="outline" className="h-6 font-sans">
+                {agentLogs.length} {t('logs.entries')}
             </Badge>
          </div>
-         <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+         <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors font-sans">
             <Checkbox checked={autoScroll} onCheckedChange={(c:boolean) => setAutoScroll(c)} />
-            <span>自动滚动</span>
+            <span>{t('logs.autoScroll')}</span>
          </label>
       </div>
 
@@ -269,22 +273,22 @@ const AgentLogsView: React.FC = () => {
          <ScrollArea className="h-full" ref={scrollRef}>
             <div className="p-6 space-y-4 max-w-4xl mx-auto">
                {agentLogs.length === 0 ? (
-                 <div className="text-center py-12 text-muted-foreground">
+                 <div className="text-center py-12 text-muted-foreground font-serif">
                    <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                   <p>暂无 Agent 交互记录</p>
-                   <p className="text-xs mt-1">开始推荐任务后这里将显示详细的推理过程</p>
+                   <p>{t('logs.agent.noLogs')}</p>
+                   <p className="text-xs mt-1">{t('logs.agent.start')}</p>
                  </div>
                ) : (
                  agentLogs.map((log, index) => (
                     <div key={index} className={`rounded-lg border p-4 ${getStyle(log.type)}`}>
                        <div className="flex items-center justify-between mb-2 border-b border-black/5 dark:border-white/5 pb-2">
-                          <div className="flex items-center gap-2 font-semibold text-sm">
+                          <div className="flex items-center gap-2 font-semibold text-sm font-sans">
                              {getIcon(log.type)}
                              <span>{getLabel(log.type)}</span>
                           </div>
                           <span className="text-xs opacity-50 font-mono">{log.timestamp}</span>
                        </div>
-                       <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                       <div className="whitespace-pre-wrap break-words text-sm leading-relaxed font-serif">
                           {log.content}
                        </div>
                     </div>
@@ -301,6 +305,7 @@ const AgentLogsView: React.FC = () => {
 // --- Main LogViewer Component ---
 
 const LogViewer: React.FC = () => {
+  const { t } = useTranslation();
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('system');
   
@@ -316,15 +321,14 @@ const LogViewer: React.FC = () => {
 
   return (
     <>
-      <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+      <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
         <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-          <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
+          <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-6 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-            
                 <div>
-                    <CardTitle className="text-2xl font-display font-bold">Logs & Activity</CardTitle>
-                    <CardDescription>查看系统运行日志和 Agent 交互详情</CardDescription>
+                    <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('logs.title')}</CardTitle>
+                    <CardDescription className="text-base text-muted-foreground font-serif">{t('logs.subtitle')}</CardDescription>
                 </div>
               </div>
               
@@ -333,10 +337,10 @@ const LogViewer: React.FC = () => {
                   onClick={() => setShowClearDialog(true)}
                   size="sm"
                   variant="destructive"
-                  className="hover-lift"
+                  className="hover-lift font-sans"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Clear System Logs
+                  {t('logs.clearSystem')}
                 </Button>
               )}
             </div>
@@ -348,12 +352,18 @@ const LogViewer: React.FC = () => {
                     <TabsList className="bg-transparent p-0 h-auto gap-6 justify-start rounded-none">
                         <TabsTrigger 
                             value="system"
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2 font-sans font-medium"
                         >
                             <Terminal className="w-4 h-4 mr-2" />
-                            System Logs
+                            {t('logs.systemLogs')}
                         </TabsTrigger>
-                      
+                        <TabsTrigger 
+                            value="agent"
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2 pb-3 pt-2 font-sans font-medium"
+                        >
+                            <Bot className="w-4 h-4 mr-2" />
+                            {t('logs.agentLogs')}
+                        </TabsTrigger>
                     </TabsList>
                 </div>
                 
@@ -372,18 +382,18 @@ const LogViewer: React.FC = () => {
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear system logs?</AlertDialogTitle>
-            <AlertDialogDescription>
-              这将永久清空当前的系统日志文件。
+            <AlertDialogTitle className="font-sans">{t('logs.clearDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription className="font-serif">
+              {t('logs.clearDialog.desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="font-sans">{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleClearLogs}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-sans"
             >
-              Clear Logs
+              {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -155,6 +155,7 @@ export namespace core {
 	export class ZoteroConfig {
 	    UserID: string;
 	    APIKey: string;
+	    LibraryType: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ZoteroConfig(source);
@@ -164,6 +165,7 @@ export namespace core {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.UserID = source["UserID"];
 	        this.APIKey = source["APIKey"];
+	        this.LibraryType = source["LibraryType"];
 	    }
 	}
 

@@ -49,8 +49,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 50 6% 80%; /* Slightly lighter than Mid Gray for borders */
-    --input: 50 6% 80%;
+    --border: 50 6% 72%; /* Mid Gray tone for borders */
+    --input: 50 6% 72%;
     
     --ring: 15 63% 60%; /* Orange ring */
 

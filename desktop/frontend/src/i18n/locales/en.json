@@ -210,5 +210,88 @@
     "loading": "Loading...",
     "cancel": "Cancel",
     "confirm": "Confirm"
+  },
+  "about": {
+    "title": "About",
+    "subtitle": "Information about PaperHunter and its components.",
+    "desc": "Your AI Research Assistant",
+    "github": "GitHub",
+    "aboutTitle": "About PaperHunter",
+    "aboutContent": "PaperHunter is an AI-powered research assistant designed to help researchers find, organize, and analyze academic papers efficiently.",
+    "zoteroTitle": "Zotero Integration",
+    "zoteroContent": "Seamlessly sync with your Zotero library to manage your references and citations.",
+    "embeddingTitle": "Vector Embeddings",
+    "embeddingContent": "Uses advanced embedding models to provide semantic search capabilities.",
+    "feishuTitle": "Feishu Integration",
+    "feishuContent": "Export your research findings to Feishu Bitable for collaborative analysis."
+  },
+  "logs": {
+    "title": "Logs",
+    "subtitle": "View system and agent activity logs.",
+    "activity": "Activity",
+    "noTask": "No active task selected.",
+    "crawling": "Crawling",
+    "completed": "Completed",
+    "totalPapers": "Total Papers: {{count}}",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search logs...",
+    "filter": "Filter",
+    "logLevel": "Log Level",
+    "globalLevel": "Global Log Level",
+    "autoScroll": "Auto Scroll",
+    "autoRefresh": "Auto Refresh",
+    "noLogs": "No logs found.",
+    "totalLogs": "Total: {{count}}",
+    "showingLogs": "Showing: {{count}}",
+    "crawlingStatus": "Crawling in progress...",
+    "live": "Live",
+    "entries": "entries",
+    "clearSystem": "Clear System Logs",
+    "systemLogs": "System Logs",
+    "agentLogs": "Agent Logs",
+    "clearDialog": {
+      "title": "Clear Logs?",
+      "desc": "This action will permanently delete all system logs. This cannot be undone."
+    },
+    "system": {
+      "noLogs": "No system logs available."
+    },
+    "agent": {
+      "noLogs": "No agent activity yet.",
+      "start": "Start a recommendation task to see agent logs here."
+    }
+  },
+  "exportView": {
+    "subtitle": "Configure your export settings",
+    "selectFormat": "Select Format",
+    "feishu": "Feishu Bitable",
+    "outputPathPlaceholder": "papers/export.csv",
+    "feishuNamePlaceholder": "My Research Papers",
+    "zoteroPlaceholder": "Collection Key (Optional)",
+    "source": "Source",
+    "allPlatforms": "All Platforms",
+    "all": "All",
+    "limit": "Limit",
+    "limitPlaceholder": "0 for all",
+    "query": "Query",
+    "queryPlaceholder": "Search in title/abstract",
+    "keywords": "Keywords",
+    "categories": "Categories",
+    "exporting": "Exporting...",
+    "validation": {
+      "invalid": "Invalid Input",
+      "outputRequired": "Output path is required",
+      "feishuNameRequired": "Feishu table name is required"
+    },
+    "success": {
+      "title": "Export Successful",
+      "feishu": "Exported to Feishu: ",
+      "saved": "Saved to: ",
+      "operation": "Export operation completed"
+    },
+    "failure": {
+      "title": "Export Failed",
+      "desc": "Check logs for details"
+    }
   }
 }
