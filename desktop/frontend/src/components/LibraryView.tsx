@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   TableBody,
@@ -73,7 +74,7 @@ interface PaperListResponse {
 }
 
 const LibraryView: React.FC = () => {
-
+    const { t } = useTranslation();
     const [mode, setMode] = useState<'basic' | 'semantic'>('basic');
     const [papers, setPapers] = useState<Paper[]>([]);
     const [total, setTotal] = useState(0);
@@ -125,14 +126,14 @@ const LibraryView: React.FC = () => {
         } catch (error) {
             console.error("Failed to load task papers:", error);
             toast({
-                title: "Error",
-                description: "Failed to load task papers",
+                title: t('common.error'),
+                description: t('library.toast.loadError'),
                 variant: "destructive",
             });
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [toast, t]);
 
 
     const fetchPapers = useCallback(async () => {
@@ -152,14 +153,14 @@ const LibraryView: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch papers:", error);
             toast({
-                title: "Error",
-                description: "Failed to fetch papers",
+                title: t('common.error'),
+                description: t('library.toast.loadError'),
                 variant: "destructive",
             });
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, source, search, mode, toast, taskId]); 
+    }, [page, pageSize, source, search, mode, toast, taskId, t]); 
     useEffect(() => {
         if (taskId) return;
         if (mode === 'basic') {
@@ -262,13 +263,13 @@ const LibraryView: React.FC = () => {
             setTotal(mapped.length); 
             setPage(1); 
             
-            toast({ title: "Semantic Search", description: `Found ${mapped.length} relevant papers` });
+            toast({ title: t('library.semanticSearch'), description: t('library.toast.searchSuccess', { count: mapped.length }) });
 
         } catch (error) {
             console.error('Search failed:', error);
             toast({
-                title: "Search Failed",
-                description: "An error occurred during semantic search",
+                title: t('library.toast.searchError'),
+                description: t('library.toast.searchError'),
                 variant: "destructive",
             });
         } finally {
@@ -317,8 +318,8 @@ const LibraryView: React.FC = () => {
     const handleExport = () => {
         if (selectedPapers.length === 0) {
           toast({
-            title: "No papers selected",
-            description: "Please select papers to export",
+            title: t('library.toast.noSelection'),
+            description: t('library.toast.noSelection'),
             variant: "destructive",
           });
           return;
@@ -332,8 +333,8 @@ const LibraryView: React.FC = () => {
              
              if (selectedPaperObjs.length < selectedPapers.length) {
                  toast({
-                     title: "Warning",
-                     description: "Only exporting papers currently visible in the list. Cross-page selection export is limited.",
+                     title: t('library.exportDialog.warning'),
+                     description: t('library.exportDialog.warning'),
                      variant: "default"
                  });
              }
@@ -377,7 +378,7 @@ const LibraryView: React.FC = () => {
 
         } catch (error: any) {
             console.error("Export failed", error);
-            toast({ title: "Export Failed", description: error.message || "Unknown error", variant: "destructive" });
+            toast({ title: t('library.toast.exportFailed'), description: error.message || "Unknown error", variant: "destructive" });
         }
     };
 
@@ -393,24 +394,24 @@ const LibraryView: React.FC = () => {
             setFeishuUrls(updated);
             
             toast({
-                title: 'Export Success',
+                title: t('library.toast.exportSuccess'),
                 description: (
                   <span>
-                    上传飞书成功: <a className="underline cursor-pointer text-primary" onClick={()=>BrowserOpenURL(result)}>Open</a>
+                    {t('library.toast.feishuSuccess')}: <a className="underline cursor-pointer text-primary" onClick={()=>BrowserOpenURL(result)}>Open</a>
                   </span>
                 ),
             });
         } else if ((exportFormat==='csv'||exportFormat==='json') && result) {
              toast({
-                title: 'Export Success',
+                title: t('library.toast.exportSuccess'),
                 description: (
                   <span>
-                    Saved to: <a className="underline cursor-pointer text-primary" onClick={()=>BrowserOpenURL(`file://${result}`)}>{result}</a>
+                    {t('library.toast.savedTo')}: <a className="underline cursor-pointer text-primary" onClick={()=>BrowserOpenURL(`file://${result}`)}>{result}</a>
                   </span>
                 )
               });
         } else {
-            toast({ title: "Export Success", description: "Operation completed." });
+            toast({ title: t('library.toast.exportSuccess'), description: "Operation completed." });
         }
     };
 
@@ -439,13 +440,13 @@ const LibraryView: React.FC = () => {
                          <div className="space-y-1">
                             <div className="flex items-center gap-3">
                                
-                                <CardTitle className="text-3xl font-display font-semibold">Library</CardTitle>
+                                <CardTitle className="text-3xl font-display font-semibold">{t('library.title')}</CardTitle>
                                 <Badge variant="outline" className="ml-2">
-                                    {mode === 'semantic' ? 'Semantic Search' : 'Standard View'}
+                                    {mode === 'semantic' ? t('library.semanticSearch') : t('library.standardView')}
                                 </Badge>
                             </div>
                              <CardDescription className="text-base text-muted-foreground ml-13">
-                                {taskId ? "当前展示的是某次爬取任务的论文（只读）" : "管理你的论文仓库以及检索相关论文"}
+                                {taskId ? t('library.taskViewDesc') : t('library.defaultDesc')}
                             </CardDescription>
                          </div>
                          <div className="flex items-center gap-2">
@@ -454,7 +455,7 @@ const LibraryView: React.FC = () => {
                                 size="sm" 
                                 onClick={toggleMode}
                             >
-                                {mode === 'semantic' ? "切换到标准模式" : "尝试语义模糊检索"}
+                                {mode === 'semantic' ? t('library.switchToStandard') : t('library.switchToSemantic')}
                             </Button>
                             <Separator orientation="vertical" className="h-6 mx-1" />
                             <Button variant="outline" size="sm" onClick={() => {
@@ -462,11 +463,11 @@ const LibraryView: React.FC = () => {
                                 else fetchPapers();
                             }} disabled={loading}>
                                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
+                                {t('library.refresh')}
                             </Button>
                             <Button variant="outline" size="sm" onClick={handleExport} disabled={selectedPapers.length === 0}>
                                 <Download className="w-4 h-4 mr-2" />
-                                Export ({selectedPapers.length})
+                                {t('library.export')} ({selectedPapers.length})
                             </Button>
                          </div>
                     </div>
@@ -479,7 +480,7 @@ const LibraryView: React.FC = () => {
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <Input 
-                                    placeholder={mode === 'semantic' ? "Describe what you are looking for..." : "Search by title, author, abstract..."}
+                                    placeholder={mode === 'semantic' ? t('library.searchPlaceholderSemantic') : t('library.searchPlaceholderStandard')}
                                     className="pl-9 bg-background/50 h-10"
                                     value={search}
                                     onChange={(e) => { setSearch(e.target.value); if (mode === 'basic') setPage(1); }}
@@ -489,10 +490,10 @@ const LibraryView: React.FC = () => {
                             
                             <Select value={source} onValueChange={(v) => { setSource(v); if (mode === 'basic') setPage(1); }}>
                                 <SelectTrigger className="w-[140px] bg-background/50">
-                                    <SelectValue placeholder="Source" />
+                                    <SelectValue placeholder={t('library.source')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Sources</SelectItem>
+                                    <SelectItem value="all">{t('library.allSources')}</SelectItem>
                                     <SelectItem value="arxiv">arXiv</SelectItem>
                                     <SelectItem value="openreview">OpenReview</SelectItem>
                                     <SelectItem value="acl">ACL</SelectItem>
@@ -506,7 +507,7 @@ const LibraryView: React.FC = () => {
                                     disabled={loading || !search.trim()}
                                     variant="default"
                                 >
-                                    Search
+                                    {t('library.search')}
                                 </Button>
                             )}
                             
@@ -517,38 +518,38 @@ const LibraryView: React.FC = () => {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-64">
-                                    <DropdownMenuLabel>Filters</DropdownMenuLabel>
+                                    <DropdownMenuLabel>{t('library.filters')}</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <div className="p-2 space-y-2">
                                         <div className="grid gap-1.5">
-                                            <Label className="text-xs">From Date</Label>
+                                            <Label className="text-xs">{t('library.fromDate')}</Label>
                                             <Input type="date" className="h-8 text-xs" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
                                         </div>
                                         <div className="grid gap-1.5">
-                                            <Label className="text-xs">Until Date</Label>
+                                            <Label className="text-xs">{t('library.untilDate')}</Label>
                                             <Input type="date" className="h-8 text-xs" value={dateUntil} onChange={(e) => setDateUntil(e.target.value)} />
                                         </div>
                                     </div>
                                     {mode === 'semantic' && (
                                         <>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuLabel>Semantic Options</DropdownMenuLabel>
+                                            <DropdownMenuLabel>{t('library.semanticOptions')}</DropdownMenuLabel>
                                             <div className="p-2 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <Checkbox id="sem-enabled" checked={semantic} onCheckedChange={(c) => setSemantic(!!c)} />
-                                                    <Label htmlFor="sem-enabled" className="text-xs">Enable Vector Search</Label>
+                                                    <Label htmlFor="sem-enabled" className="text-xs">{t('library.enableVectorSearch')}</Label>
                                                 </div>
                                                 <div className="grid gap-1.5">
-                                                    <Label className="text-xs">Top K Results: {topK}</Label>
+                                                    <Label className="text-xs">{t('library.topK')}: {topK}</Label>
                                                     <Input type="number" className="h-8 text-xs" value={topK} onChange={(e) => setTopK(parseInt(e.target.value)||100)} />
                                                 </div>
                                                 <Button size="sm" variant="ghost" className="w-full text-xs justify-start h-6 px-0" onClick={() => setShowAdvancedSemantic(!showAdvancedSemantic)}>
-                                                    {showAdvancedSemantic ? "隐藏 Examples" : "采用 json example"}
+                                                    {showAdvancedSemantic ? t('library.hideExamples') : t('library.showExamples')}
                                                 </Button>
                                                 {showAdvancedSemantic && (
                                                     <textarea
                                                         className="w-full h-20 text-xs border rounded p-1 bg-background"
-                                                        placeholder="JSON examples..."
+                                                        placeholder={t('library.jsonExamples')}
                                                         value={examplesText}
                                                         onChange={(e) => setExamplesText(e.target.value)}
                                                     />
@@ -572,22 +573,22 @@ const LibraryView: React.FC = () => {
                                             onCheckedChange={handleSelectAll}
                                         />
                                     </TableHead>
-                                    <TableHead className="w-[40%]">Title</TableHead>
-                                    <TableHead className="w-[20%]">Authors</TableHead>
-                                    <TableHead className="w-[10%]">Source</TableHead>
-                                    <TableHead className="w-[12%]">Date</TableHead>
-                                    {mode === 'semantic' && <TableHead className="w-[10%]">Similarity</TableHead>}
-                                    <TableHead className="w-[8%] text-right pr-6">Actions</TableHead>
+                                    <TableHead className="w-[40%]">{t('library.table.title')}</TableHead>
+                                    <TableHead className="w-[20%]">{t('library.table.authors')}</TableHead>
+                                    <TableHead className="w-[10%]">{t('library.table.source')}</TableHead>
+                                    <TableHead className="w-[12%]">{t('library.table.date')}</TableHead>
+                                    {mode === 'semantic' && <TableHead className="w-[10%]">{t('library.table.similarity')}</TableHead>}
+                                    <TableHead className="w-[8%] text-right pr-6">{t('library.table.actions')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading && papers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={mode === 'semantic' ? 7 : 6} className="h-24 text-center">Loading...</TableCell>
+                                        <TableCell colSpan={mode === 'semantic' ? 7 : 6} className="h-24 text-center">{t('library.loading')}</TableCell>
                                     </TableRow>
                                 ) : papers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={mode === 'semantic' ? 7 : 6} className="h-24 text-center text-muted-foreground">No papers found</TableCell>
+                                        <TableCell colSpan={mode === 'semantic' ? 7 : 6} className="h-24 text-center text-muted-foreground">{t('library.noPapers')}</TableCell>
                                     </TableRow>
                                 ) : (
                                     papers.map((paper) => (
@@ -657,7 +658,7 @@ const LibraryView: React.FC = () => {
                     {mode === 'basic' && (
                         <div className="p-4 border-t border-border/30 bg-card/10 flex items-center justify-between">
                             <div className="text-sm text-muted-foreground">
-                                Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, total)} of {total} entries
+                                {t('library.showing', { from: (page - 1) * pageSize + 1, to: Math.min(page * pageSize, total), total })}
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button 
@@ -708,7 +709,7 @@ const LibraryView: React.FC = () => {
                             
                             <div className="space-y-6">
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Authors</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.authors')}</h4>
                                     <div className="flex flex-wrap gap-2">
                                         {selectedPaper.Authors?.map((author, i) => (
                                             <Badge key={i} variant="outline" className="font-normal">
@@ -719,7 +720,7 @@ const LibraryView: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Abstract</h4>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.abstract')}</h4>
                                     <p className="text-sm leading-relaxed text-foreground/90 text-justify">
                                         {selectedPaper.Abstract}
                                     </p>
@@ -727,7 +728,7 @@ const LibraryView: React.FC = () => {
 
                                 {selectedPaper.SourceID && (
                                     <div>
-                                        <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">ID</h4>
+                                        <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">{t('library.id')}</h4>
                                         <code className="text-xs bg-muted px-2 py-1 rounded">
                                             {selectedPaper.SourceID}
                                         </code>
@@ -739,7 +740,7 @@ const LibraryView: React.FC = () => {
                                 <div className="flex gap-3">
                                     <Button onClick={() => openPaper(selectedPaper.URL)} className="flex-1">
                                         <ExternalLink className="w-4 h-4 mr-2" />
-                                        Read Full Paper
+                                        {t('library.readFullPaper')}
                                     </Button>
                                     {/* Additional actions could go here */}
                                 </div>
@@ -753,14 +754,14 @@ const LibraryView: React.FC = () => {
             <AlertDialog open={exportOpen} onOpenChange={setExportOpen}>
                 <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Export Selected Papers</AlertDialogTitle>
+                    <AlertDialogTitle>{t('library.exportDialog.title')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                    Choose format and configure export settings.
+                    {t('library.exportDialog.description')}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                    <Label className="text-sm font-medium">Format</Label>
+                    <Label className="text-sm font-medium">{t('export.format')}</Label>
                     <Select value={exportFormat} onValueChange={(v:any)=>setExportFormat(v)}>
                         <SelectTrigger>
                         <SelectValue placeholder="Select Format" />
@@ -776,26 +777,26 @@ const LibraryView: React.FC = () => {
 
                     {(exportFormat==='csv'||exportFormat==='json') && (
                     <div className="space-y-2">
-                        <Label>Output Path (Optional)</Label>
+                        <Label>{t('export.outputPath')}</Label>
                         <Input value={exportOutput} onChange={(e)=>setExportOutput(e.target.value)} placeholder="out/papers.csv or papers.json" />
                     </div>
                     )}
                     {exportFormat==='zotero' && (
                     <div className="space-y-2">
-                        <Label>Collection Key (Optional)</Label>
+                        <Label>{t('export.collectionKey')}</Label>
                         <Input value={exportCollection} onChange={(e)=>setExportCollection(e.target.value)} placeholder="e.g., ABC123XY" />
                     </div>
                     )}
                     {exportFormat==='feishu' && (
                     <div className="space-y-2">
-                        <Label>Feishu Dataset Name</Label>
+                        <Label>{t('export.feishuName')}</Label>
                         <Input value={exportFeishuName} onChange={(e)=>setExportFeishuName(e.target.value)} placeholder="e.g., Papers Dataset" />
                     </div>
                     )}
                 </div>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmExport}>Export</AlertDialogAction>
+                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmExport}>{t('common.confirm')}</AlertDialogAction>
                 </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

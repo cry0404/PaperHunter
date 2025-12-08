@@ -1,112 +1,98 @@
+@import './fonts.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: "Nunito";
-  font-style: normal;
-  font-weight: 400;
-  src: local(""),
-  url("../assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
-}
+
 
 @layer base {
   :root {
-    /* Warm Beige #F3F0E9 - slightly adjusted for better contrast */
-    --background: 40 20% 94%; 
-    /* Deep Navy Blue #1B2A41 (Text & Accents) */
-    --foreground: 216 41% 18%;
-    
-    /* White/Lighter Beige for Cards */
+    /* 
+      Anthropic Brand Colors:
+      Light: #faf9f5 -> 48 27% 97%
+      Dark: #141413 -> 60 2% 8%
+      Mid Gray: #b0aea5 -> 50 6% 67%
+      Light Gray: #e8e6dc -> 50 18% 89%
+      Orange: #d97757 -> 15 63% 60%
+      Blue: #6a9bcc -> 210 48% 61%
+      Green: #788c5d -> 85 20% 46%
+    */
+
+    /* Background: Light (#faf9f5) */
+    --background: 48 27% 97%;
+    /* Foreground: Dark (#141413) */
+    --foreground: 60 2% 8%;
+
+    /* Card: White or Light Gray */
     --card: 0 0% 100%;
-    --card-foreground: 216 41% 18%;
-    
+    --card-foreground: 60 2% 8%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 216 41% 18%;
-    
-    /* Terracotta Red #D67052 */
-    --primary: 14 61% 58%;
+    --popover-foreground: 60 2% 8%;
+
+    /* Primary: Orange (#d97757) */
+    --primary: 15 63% 60%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Mustard Yellow #F0B857 */
-    --secondary: 38 83% 64%;
-    --secondary-foreground: 216 41% 18%;
-    
-    /* Muted Beige/Grey */
-    --muted: 42 15% 90%;
-    --muted-foreground: 216 20% 45%;
-    
-    /* Deep Navy Blue #1B2A41 */
-    --accent: 216 41% 18%;
-    --accent-foreground: 0 0% 100%;
-    
+
+    /* Secondary: Light Gray (#e8e6dc) */
+    --secondary: 50 18% 89%;
+    --secondary-foreground: 60 2% 8%;
+
+    /* Muted: Light Gray (#e8e6dc) */
+    --muted: 50 18% 89%;
+    --muted-foreground: 50 6% 67%; /* Mid Gray (#b0aea5) for text */
+
+    /* Accent: Blue (#6a9bcc) or Light Gray for hover */
+    --accent: 50 18% 89%;
+    --accent-foreground: 60 2% 8%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+
+    --border: 50 6% 80%; /* Slightly lighter than Mid Gray for borders */
+    --input: 50 6% 80%;
     
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-    
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    
-    /* Darker Beige/Grey for borders to be more visible */
-    --border: 216 10% 80%;
-    --input: 216 10% 80%;
-    
-    --ring: 14 61% 58%;
-    
+    --ring: 15 63% 60%; /* Orange ring */
+
     --radius: 0.5rem;
   }
 
   .dark {
-    /* Dark Warm Grey Background #1E1D1B */
-    --background: 30 6% 11%;
-    /* Light Warm Beige Text #E6E1D3 */
-    --foreground: 40 20% 88%;
-    
-    /* Slightly lighter dark grey for cards #252422 */
-    --card: 30 4% 14%;
-    --card-foreground: 40 20% 88%;
-    
-    --popover: 30 4% 14%;
-    --popover-foreground: 40 20% 88%;
-    
-    /* Terracotta Red - slightly brighter for dark mode */
-    --primary: 14 61% 66%;
+    /* Background: Dark (#141413) */
+    --background: 60 2% 8%;
+    /* Foreground: Light (#faf9f5) */
+    --foreground: 48 27% 97%;
+
+    /* Card: Slightly lighter dark or same as bg */
+    --card: 60 2% 10%;
+    --card-foreground: 48 27% 97%;
+
+    --popover: 60 2% 10%;
+    --popover-foreground: 48 27% 97%;
+
+    /* Primary: Orange (#d97757) */
+    --primary: 15 63% 60%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Mustard Yellow - slightly brighter */
-    --secondary: 38 83% 74%;
-    --secondary-foreground: 216 41% 18%;
-    
-    /* Darker Muted Grey */
-    --muted: 30 4% 20%;
-    --muted-foreground: 40 10% 60%;
-    
-    /* Light Beige Accent */
-    --accent: 40 20% 88%;
-    --accent-foreground: 30 6% 11%;
-    
+
+    /* Secondary: Dark Gray */
+    --secondary: 60 2% 15%;
+    --secondary-foreground: 48 27% 97%;
+
+    /* Muted: Dark Gray */
+    --muted: 60 2% 15%;
+    --muted-foreground: 50 6% 60%;
+
+    /* Accent: Dark Gray for hover */
+    --accent: 60 2% 15%;
+    --accent-foreground: 48 27% 97%;
+
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
-    
-    --success: 142 70% 30%;
-    --success-foreground: 0 0% 100%;
-    
-    --info: 199 80% 40%;
-    --info-foreground: 0 0% 100%;
-    
-    --warning: 38 90% 40%;
-    --warning-foreground: 0 0% 100%;
-    
-    /* Dark Grey Borders */
-    --border: 30 4% 25%;
-    --input: 30 4% 25%;
-    
-    --ring: 14 61% 66%;
+
+    --border: 60 2% 20%;
+    --input: 60 2% 20%;
+
+    --ring: 15 63% 60%;
   }
 }
 
@@ -117,16 +103,19 @@
   body {
     @apply bg-background text-foreground transition-colors duration-300;
     margin: 0;
-    /* Modern Sans-serif for body */
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-      "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-      sans-serif;
+    /* Body Text: Lora */
+    font-family: "Lora", "Georgia", "Times New Roman", "Times", serif;
   }
   
-  /* Elegant Serif for Headings */
+  /* Headings: Poppins */
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Georgia", "Times New Roman", Times, serif;
-    @apply font-semibold tracking-tight;
+    font-family: "Poppins", "Arial", "sans-serif";
+    @apply font-medium tracking-tight;
+  }
+
+  /* Button text usually looks better sans-serif */
+  button, .btn {
+    font-family: "Poppins", "Arial", "sans-serif";
   }
 
   #root {
@@ -198,34 +187,35 @@ body {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 100%);
   }
   
+  /* Anthropic doesn't use strong text gradients, prefers solid colors. 
+     Keeping this but adjusting to use brand colors if needed. */
   .gradient-text {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
+  /* Updated Glass Card to be more subtle / Anthropic style */
   .glass-card {
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
   }
 
   .dark .glass-card {
-    background: rgba(30, 29, 27, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(20, 20, 19, 0.8); /* #141413 with opacity */
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
   
+  /* Paper texture - can probably remove or make very subtle. 
+     Anthropic uses clean solid colors. I'll make it extremely subtle. */
   .paper-texture {
     background-color: hsl(var(--background));
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+    background-image: none; /* Removing noise for cleaner look */
   }
 
-  .dark .paper-texture {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-  }
-  
   .hover-lift {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   }
@@ -234,19 +224,8 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
   }
-  
+
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    animation: fade-in 0.5s ease-out;
   }
 }

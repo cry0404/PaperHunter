@@ -15,8 +15,9 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        sans: ["Nunito", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
-        serif: ["Georgia", "Times New Roman", "Times", "serif"],
+        sans: ["Poppins", "Arial", "sans-serif"],
+        serif: ["Lora", "Georgia", "serif"],
+        display: ["Poppins", "Arial", "sans-serif"], // Added for compatibility
       },
       colors: {
         border: "hsl(var(--border))",
@@ -52,17 +53,15 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          foreground: "hsl(var(--info-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
+        // Custom Anthropic Palette
+        anthropic: {
+          dark: "#141413",
+          light: "#faf9f5",
+          mid: "#b0aea5",
+          soft: "#e8e6dc",
+          orange: "#d97757",
+          blue: "#6a9bcc",
+          green: "#788c5d",
         },
       },
       borderRadius: {
@@ -79,10 +78,25 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: 0 },
         },
+        "fade-in": {
+          from: { opacity: 0, transform: "translateY(5px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
+        "fade-in-up": {
+          from: { opacity: 0, transform: "translateY(10px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
+        "pulse-subtle": {
+          "0%, 100%": { opacity: 1 },
+          "50%": { opacity: 0.8 },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.4s ease-out",
+        "fade-in-up": "fade-in-up 0.6s ease-out",
+        "pulse-subtle": "pulse-subtle 3s ease-in-out infinite",
       },
     },
   },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -46,6 +47,7 @@ interface CrawlTask {
 }
 
 const LogsView: React.FC = () => {
+    const { t } = useTranslation();
     const [currentTask, setCurrentTask] = useState<CrawlTask | null>(null);
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [levelFilter, setLevelFilter] = useState<Set<string>>(new Set(['info', 'success', 'warning', 'error']));
@@ -262,7 +264,7 @@ const LogsView: React.FC = () => {
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                     <TerminalBoxLineIcon className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">未找到爬取任务</p>
+                    <p className="text-muted-foreground">{t('logs.noTask')}</p>
                 </div>
             </div>
         );
@@ -280,14 +282,14 @@ const LogsView: React.FC = () => {
                                 </div>
                                 <div>
                                     <CardTitle className="text-2xl font-display font-semibold">
-                                        爬取日志 - {currentTask.platform}
+                                        {t('logs.title')} - {currentTask.platform}
                                     </CardTitle>
                                     <CardDescription className="text-sm text-muted-foreground">
                                         <Badge className={`mr-2 ${getStatusColor(currentTask.status)}`}>
                                             {currentTask.status}
                                         </Badge>
-                                        {currentTask.status === 'running' ? '正在爬取中...' : '爬取已完成'} |
-                                        总计: {currentTask.total_count} 篇论文
+                                        {currentTask.status === 'running' ? t('logs.crawling') : t('logs.completed')} |
+                                        {t('logs.totalPapers', { count: currentTask.total_count })}
                                     </CardDescription>
                                 </div>
                             </div>
@@ -302,7 +304,7 @@ const LogsView: React.FC = () => {
                                 className="hover-lift"
                             >
                                 <RefreshLineIcon className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                刷新
+                                {t('logs.refresh')}
                             </Button>
                         </div>
                     </div>
@@ -317,7 +319,7 @@ const LogsView: React.FC = () => {
                                 <div className="relative">
                                     <SearchLineIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <Input
-                                        placeholder="搜索日志内容..."
+                                        placeholder={t('logs.searchPlaceholder')}
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="pl-10"
@@ -327,7 +329,7 @@ const LogsView: React.FC = () => {
 
                     {/* 级别过滤 */}
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground mr-1">Filter:</span>
+                      <span className="text-sm font-medium text-muted-foreground mr-1">{t('logs.filter')}</span>
                       {['info', 'success', 'warning', 'error', 'debug'].map(level => {
                         const getLevelBadgeColor = (lvl: string) => {
                           switch (lvl) {
@@ -358,7 +360,7 @@ const LogsView: React.FC = () => {
 
                     {/* 全局日志级别（影响后端） */}
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium">全局级别:</Label>
+                      <Label className="text-sm font-medium">{t('logs.globalLevel')}</Label>
                       <Select value={globalLevel} onValueChange={(v:any)=>applyGlobalLevel(v)}>
                         <SelectTrigger className="w-[120px]">
                           <SelectValue placeholder="INFO" />
@@ -377,7 +379,7 @@ const LogsView: React.FC = () => {
                                         checked={autoScroll}
                                         onCheckedChange={(checked) => setAutoScroll(checked === true)}
                                     />
-                                    <span>自动滚动</span>
+                                    <span>{t('logs.autoScroll')}</span>
                                 </label>
                             </div>
                         </div>
@@ -390,7 +392,7 @@ const LogsView: React.FC = () => {
                                 {filteredLogs.length === 0 ? (
                                     <div className="text-center py-8 text-muted-foreground">
                                         <TerminalBoxLineIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                        <p>暂无日志记录</p>
+                                        <p>{t('logs.noLogs')}</p>
                                     </div>
                                 ) : (
                                     filteredLogs.map((log) => (
@@ -432,12 +434,12 @@ const LogsView: React.FC = () => {
                     {/* 状态栏 */}
                     <div className="border-t border-border/30 p-3 bg-muted/30 flex items-center justify-between text-sm text-muted-foreground">
                         <div className="flex items-center gap-4">
-                            <span>总计: {logs.length} 条日志</span>
-                            <span>显示: {filteredLogs.length} 条</span>
+                            <span>{t('logs.totalLogs', { count: logs.length })}</span>
+                            <span>{t('logs.showingLogs', { count: filteredLogs.length })}</span>
                             {currentTask.status === 'running' && (
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                    <span>正在爬取...</span>
+                                    <span>{t('logs.crawlingStatus')}</span>
                                 </div>
                             )}
                         </div>
@@ -445,7 +447,7 @@ const LogsView: React.FC = () => {
                             {autoScroll && (
                                 <div className="flex items-center gap-1 text-xs">
                                     <ArrowDownLineIcon className="w-3 h-3" />
-                                    <span>自动滚动</span>
+                                    <span>{t('logs.autoScroll')}</span>
                                 </div>
                             )}
                         </div>

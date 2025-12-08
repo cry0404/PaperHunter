@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"PaperHunter/config"
 	"PaperHunter/internal/core"
 	"PaperHunter/internal/platform"
 	"PaperHunter/pkg/logger"
-	"fmt"
-	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -25,6 +29,10 @@ func (a *App) UpdateConfig(cfg *config.AppConfig) error {
 		return fmt.Errorf("验证配置失败: %w", err)
 	}
 
+	if err := a.copyDatabaseIfPathChanged(oldConfig, cfg); err != nil {
+		return fmt.Errorf("复制数据库失败: %w", err)
+	}
+
 	if err := a.saveConfig(cfg); err != nil {
 
 		return fmt.Errorf("保存配置失败: %w", err)
@@ -41,7 +49,10 @@ func (a *App) UpdateConfig(cfg *config.AppConfig) error {
 		return fmt.Errorf("重载 app 失败: %w", err)
 	}
 
+	// 更新内存配置并重新初始化 HyDE（确保 LLM 配置生效）
 	a.config = cfg
+	a.initHyDE()
+
 	logger.Info("配置更新并重载成功")
 	return nil
 }
@@ -102,11 +113,6 @@ func (a *App) reloadCoreApp(cfg *config.AppConfig) error {
 		return fmt.Errorf("配置不能为空")
 	}
 
-	if a.coreApp != nil {
-		a.coreApp.Close()
-		logger.Debug("Closing old core application instance")
-	}
-
 	coreApp, err := core.NewApp(cfg.Database.Path, cfg.Embedder,
 		map[string]platform.Config{
 			"arxiv":      &cfg.Arxiv,
@@ -117,6 +123,11 @@ func (a *App) reloadCoreApp(cfg *config.AppConfig) error {
 
 	if err != nil {
 		return fmt.Errorf("重新初始化核心模块失败: %w", err)
+	}
+
+	if a.coreApp != nil {
+		_ = a.coreApp.Close()
+		logger.Debug("Closing old core application instance")
 	}
 
 	a.coreApp = coreApp
@@ -132,4 +143,72 @@ func (a *App) ReloadConfig() error {
 	}
 
 	return a.UpdateConfig(cfg)
+}
+
+func defaultDBPath() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, ".quicksearch", "data", "quicksearch.db")
+}
+
+func (a *App) copyDatabaseIfPathChanged(oldCfg, newCfg *config.AppConfig) error {
+	if newCfg == nil {
+		return fmt.Errorf("新配置不能为空")
+	}
+
+	oldPath := defaultDBPath()
+	if oldCfg != nil && strings.TrimSpace(oldCfg.Database.Path) != "" {
+		oldPath = strings.TrimSpace(oldCfg.Database.Path)
+	}
+
+	newPath := strings.TrimSpace(newCfg.Database.Path)
+	if newPath == "" || filepath.Clean(newPath) == filepath.Clean(oldPath) {
+		return nil
+	}
+
+	if a.coreApp != nil {
+		_ = a.coreApp.Close()
+		a.coreApp = nil
+		logger.Info("已关闭旧数据库连接，准备复制到新路径")
+	}
+
+	if _, err := os.Stat(oldPath); err != nil {
+		return fmt.Errorf("原数据库不存在或不可访问: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err != nil {
+		return fmt.Errorf("创建目标目录失败: %w", err)
+	}
+
+	if err := copyFileForce(oldPath, newPath); err != nil {
+		return fmt.Errorf("复制数据库文件失败: %w", err)
+	}
+
+	for _, suf := range []string{"-wal", "-shm"} {
+		src := oldPath + suf
+		if _, err := os.Stat(src); err == nil {
+			_ = copyFileForce(src, newPath+suf)
+		}
+	}
+
+	logger.Info("数据库已复制到新路径: %s", newPath)
+	return nil
+}
+
+func copyFileForce(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+	return out.Sync()
 }

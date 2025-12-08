@@ -44,7 +44,7 @@ const TitleBar: React.FC = () => {
 
       {/* 中间标题区域 */}
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-base font-serif font-bold text-foreground tracking-wide">PaperHunter</span>
+        <span className="text-base font-sans font-bold text-foreground tracking-wide">PaperHunter</span>
       </div>
 
       {/* Windows 风格 - 按钮在右边 */}

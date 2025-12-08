@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -18,16 +19,21 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 
-import PlayLineIcon from 'remixicon-react/PlayLineIcon';
-import SettingsLineIcon from 'remixicon-react/SettingsLineIcon';
-import DatabaseLineIcon from 'remixicon-react/DatabaseLineIcon';
-import CalendarLineIcon from 'remixicon-react/CalendarLineIcon';
-import PriceTag3LineIcon from 'remixicon-react/PriceTag3LineIcon';
-import HashtagIcon from 'remixicon-react/HashtagIcon';
-import TerminalBoxLineIcon from 'remixicon-react/TerminalBoxLineIcon';
-import FileDownloadLineIcon from 'remixicon-react/FileDownloadLineIcon';
-import ExternalLinkLineIcon from 'remixicon-react/ExternalLinkLineIcon';
-import RefreshLineIcon from 'remixicon-react/RefreshLineIcon';
+import {
+  Play,
+  Settings,
+  Database,
+  Calendar,
+  Tags,
+  Hash,
+  Terminal,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  Loader2,
+  FileDown
+} from 'lucide-react';
+
 import { GetConfig } from '../../wailsjs/go/main/App';
 import * as models from '../../wailsjs/go/models';
 import { useToast } from './ui/use-toast';
@@ -54,6 +60,7 @@ interface CrawlHistoryEntry {
 }
 
 const SearchView: React.FC = () => {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<models.config.AppConfig | null>(null);
   const completionNotifiedRef = useRef<string | null>(null);
   
@@ -96,8 +103,8 @@ const SearchView: React.FC = () => {
     } catch (error) {
       console.error('Failed to load config:', error);
       toast({
-        title: "配置加载失败",
-        description: "无法获取配置信息，请重试",
+        title: t('common.error'),
+        description: "Could not retrieve configuration info, please retry",
         variant: "destructive",
       });
     } finally {
@@ -110,8 +117,8 @@ const SearchView: React.FC = () => {
     if (crawlParams.platform === 'openreview') {
       if (!crawlParams.venueId.trim()) {
         toast({
-          title: "请输入会议名称",
-          description: "OpenReview 需要指定会议名称 (venue_id)",
+          title: t('common.error'),
+          description: "Venue ID Required",
           variant: "destructive",
         });
         return;
@@ -121,8 +128,8 @@ const SearchView: React.FC = () => {
     } else if (crawlParams.platform === 'arxiv') {
       if (crawlParams.keywords.length === 0 && crawlParams.categories.length === 0) {
         toast({
-          title: "请输入搜索条件",
-          description: "arXiv 需要至少填写关键词或类别",
+          title: t('common.error'),
+          description: "arXiv requires at least one keyword or category",
           variant: "destructive",
         });
         return;
@@ -130,8 +137,8 @@ const SearchView: React.FC = () => {
     } else if (crawlParams.platform === 'ssrn') {
       if (crawlParams.keywords.length === 0) {
         toast({
-          title: "请输入关键词",
-          description: "SSRN 需要至少填写一个关键词",
+          title: t('common.error'),
+          description: "SSRN requires at least one keyword",
           variant: "destructive",
         });
         return;
@@ -147,8 +154,8 @@ const SearchView: React.FC = () => {
       console.log('Starting crawl with params:', crawlParams);
       
       toast({
-        title: "爬取开始",
-        description: `正在从 ${crawlParams.platform} 爬取论文...`,
+        title: t('common.success'),
+        description: `Crawling papers from ${crawlParams.platform}...`,
       });
       
       // 调用后端爬取API
@@ -164,8 +171,8 @@ const SearchView: React.FC = () => {
       setTaskStatus('failed');
       
       toast({
-        title: "爬取失败",
-        description: "爬取过程中出现错误，请检查网络连接和配置",
+        title: t('common.error'),
+        description: "An error occurred during crawling, check logs for details",
         variant: "destructive",
       });
     }
@@ -217,8 +224,8 @@ const SearchView: React.FC = () => {
 
     if (!currentTaskId) {
       toast({
-        title: "暂无可导出的任务",
-        description: "请先运行并完成一次爬取任务",
+        title: t('common.error'),
+        description: "Please run a crawl task first",
         variant: "destructive",
       });
       return;
@@ -231,8 +238,8 @@ const SearchView: React.FC = () => {
     }
     if (fmt === 'feishu' && !feishuName.trim()) {
       toast({
-        title: "请填写飞书数据集名称",
-        description: "飞书导出需要数据集名称",
+        title: t('common.error'),
+        description: "Please provide a name for the Feishu dataset",
         variant: "destructive",
       });
       return;
@@ -244,33 +251,33 @@ const SearchView: React.FC = () => {
 
       if ((fmt === 'csv' || fmt === 'json') && result) {
         toast({
-          title: "导出完成",
+          title: t('common.success'),
           description: (
             <div className="break-all">
-              已保存到: <a className="underline" onClick={() => BrowserOpenURL(`file://${result}`)}>{result}</a>
+              Saved to: <a className="underline cursor-pointer" onClick={() => BrowserOpenURL(`file://${result}`)}>{result}</a>
             </div>
           ),
         });
       } else if (fmt === 'feishu' && result) {
         toast({
-          title: "导出完成",
+          title: t('common.success'),
           description: (
             <div className="break-all">
-              已上传到飞书: <a className="underline" onClick={() => BrowserOpenURL(result)}>{result}</a>
+              Uploaded to Feishu: <a className="underline cursor-pointer" onClick={() => BrowserOpenURL(result)}>{result}</a>
             </div>
           ),
         });
       } else {
         toast({
-          title: "导出完成",
-          description: "操作成功",
+          title: t('common.success'),
+          description: "Operation successful",
         });
       }
     } catch (error) {
       console.error('Export crawl task failed:', error);
       toast({
-        title: "导出失败",
-        description: "导出过程中出错，请检查配置",
+        title: t('common.error'),
+        description: "Error during export, check configuration",
         variant: "destructive",
       });
     }
@@ -287,7 +294,7 @@ const SearchView: React.FC = () => {
       setTaskPapers(list);
     } catch (error) {
       console.error('Load task papers failed:', error);
-      setTaskPapersError('加载本次爬取的论文失败');
+      setTaskPapersError('Failed to load papers');
     } finally {
       setTaskPapersLoading(false);
     }
@@ -315,10 +322,10 @@ const SearchView: React.FC = () => {
       const { ClearCrawlHistory }: any = await import('../../wailsjs/go/main/App');
       await ClearCrawlHistory();
       setHistory([]);
-      toast({ title: "历史已清空", description: "仅保留最新的记录后清理完成" });
+      toast({ title: t('common.success'), description: "History cleared" });
     } catch (error) {
       console.error('Clear history failed:', error);
-      toast({ title: "清空失败", description: "请检查日志后重试", variant: "destructive" });
+      toast({ title: t('common.error'), description: "Check logs for details", variant: "destructive" });
     }
   };
 
@@ -381,8 +388,8 @@ const SearchView: React.FC = () => {
           }
           if (logEntry.level === 'error') {
             toast({
-              title: "爬取失败",
-              description: "爬取过程中出现错误，查看日志获取详情",
+              title: t('common.error'),
+              description: "Error occurred, check logs",
               variant: "destructive",
             });
           }
@@ -392,12 +399,10 @@ const SearchView: React.FC = () => {
 
     return () => {
       EventsOff("crawl-log");
-      // Wails EventsOn 不返回取消函数，这里简单移除事件监听
-      // 若未来升级 Wails 返回取消函数，可改为调用 cancel()
     };
   }, [currentTaskId, crawlParams.platform, setIsCrawling, toast]);
 
-  // 兜底轮询任务状态，防止事件丢失导致按钮一直“运行中”
+  // 兜底轮询任务状态
   useEffect(() => {
     if (!isCrawling || !currentTaskId) return;
 
@@ -420,8 +425,8 @@ const SearchView: React.FC = () => {
             }
             if (status !== 'completed') {
               toast({
-                title: "爬取失败",
-                description: "爬取过程中出现错误，查看日志获取详情",
+                title: t('common.error'),
+                description: "Error occurred, check logs",
                 variant: "destructive",
               });
             }
@@ -437,27 +442,27 @@ const SearchView: React.FC = () => {
 
   if (loading || !config) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-background">
         <div className="text-center">
-          <DatabaseLineIcon className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading configuration...</p>
+          <Database className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground font-sans">{t('common.loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-        <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
+        <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3">
               
-                <CardTitle className="text-3xl font-display font-semibold">Crawl Papers</CardTitle>
+                <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('search.title')}</CardTitle>
               </div>
-              <CardDescription className="text-sm text-muted-foreground ml-13">
-                从学术平台爬取论文标题和摘要
+              <CardDescription className="text-sm text-muted-foreground ml-13 font-serif">
+                {t('search.subtitle')}
               </CardDescription>
             </div>
             
@@ -467,10 +472,10 @@ const SearchView: React.FC = () => {
                   onClick={() => window.location.hash = `#/logs?taskId=${currentTaskId}`}
                   size="sm"
                   variant="secondary"
-                  className="hover-lift flex items-center gap-2"
+                  className="hover-lift flex items-center gap-2 font-sans"
                 >
-                  <TerminalBoxLineIcon className="h-4 w-4" />
-                  <span>查看任务日志</span>
+                  <Terminal className="h-4 w-4" />
+                  <span>{t('search.viewLogs')}</span>
                   {isCrawling && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
                 </Button>
               )}
@@ -479,10 +484,10 @@ const SearchView: React.FC = () => {
                 disabled={loading}
                 size="sm"
                 variant="outline"
-                className="hover-lift"
+                className="hover-lift font-sans"
               >
-                <SettingsLineIcon className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Reload Config
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {t('search.reloadConfig')}
               </Button>
             </div>
           </div>
@@ -492,22 +497,22 @@ const SearchView: React.FC = () => {
           <div className="max-w-5xl mx-auto space-y-6">
             {/* 当前任务结果展示，仅任务完成后显示 */}
             {currentTaskId && taskStatus === 'completed' && (
-              <div className="glass-card p-4 rounded-xl space-y-3">
+              <div className="p-4 rounded-xl space-y-3 bg-card/30 border border-border/40">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-muted-foreground">本次爬取任务</div>
-                    <div className="text-lg font-semibold">Task: {currentTaskId}</div>
+                    <div className="text-sm text-muted-foreground font-sans">{t('search.currentTask')}</div>
+                    <div className="text-lg font-semibold font-mono text-foreground">{currentTaskId}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" disabled={taskPapers.length === 0}>
-                          <FileDownloadLineIcon className="w-4 h-4 mr-2" />
-                          一键导出
+                        <Button size="sm" disabled={taskPapers.length === 0} className="font-sans">
+                          <Download className="w-4 h-4 mr-2" />
+                          {t('search.export')}
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuLabel>选择导出方式</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-44 font-sans">
+                        <DropdownMenuLabel>Choose Format</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {(['csv','json','feishu','zotero'] as const).map(fmt => (
                           <DropdownMenuItem
@@ -534,22 +539,22 @@ const SearchView: React.FC = () => {
                     </DropdownMenu>
                   </div>
                 </div>
-                {taskPapersLoading && <div className="text-sm text-muted-foreground">正在加载本次爬取的论文...</div>}
-                {taskPapersError && <div className="text-sm text-destructive">{taskPapersError}</div>}
+                {taskPapersLoading && <div className="text-sm text-muted-foreground font-sans">{t('common.loading')}</div>}
+                {taskPapersError && <div className="text-sm text-destructive font-sans">{taskPapersError}</div>}
                 {!taskPapersLoading && taskPapers.length === 0 && (
-                  <div className="text-sm text-muted-foreground">暂无可展示的论文，请稍后或重试。</div>
+                  <div className="text-sm text-muted-foreground font-sans">{t('search.noPapers')}</div>
                 )}
                 {!taskPapersLoading && taskPapers.length > 0 && (
                   <div className="space-y-3">
                     {taskPapers.map((paper) => (
-                      <div key={`${paper.Source}-${paper.SourceID}`} className="border border-border/60 rounded-lg p-3 hover:bg-card/60 transition">
+                      <div key={`${paper.Source}-${paper.SourceID}`} className="border border-border/60 rounded-lg p-3 hover:bg-card/60 transition bg-background">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <div className="text-base font-semibold leading-snug">{paper.Title}</div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-base font-semibold leading-snug font-sans text-foreground">{paper.Title}</div>
+                            <div className="text-xs text-muted-foreground font-sans">
                               {paper.Authors?.join(', ')}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-muted-foreground font-mono">
                               {paper.Source} · {paper.SourceID}
                             </div>
                           </div>
@@ -557,15 +562,16 @@ const SearchView: React.FC = () => {
                             <Button
                               size="sm"
                               variant="ghost"
+                              className="font-sans"
                               onClick={() => BrowserOpenURL(paper.URL)}
                             >
-                              <ExternalLinkLineIcon className="w-4 h-4 mr-1" />
-                              打开
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              {t('search.open')}
                             </Button>
                           )}
                         </div>
                         {paper.Abstract && (
-                          <div className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                          <div className="text-sm text-muted-foreground mt-2 line-clamp-3 font-serif leading-relaxed">
                             {paper.Abstract}
                           </div>
                         )}
@@ -578,33 +584,34 @@ const SearchView: React.FC = () => {
 
             {/* 历史记录 */}
             {history.length > 0 && (
-              <div className="glass-card p-4 rounded-xl space-y-3">
+              <div className="p-4 rounded-xl space-y-3 bg-card/30 border border-border/40">
                 <div className="flex items-center justify-between">
-                  <div className="text-lg font-semibold">历史记录（保留最近 10 条）</div>
+                  <div className="text-lg font-semibold font-sans">{t('search.history')}</div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={loadHistory}>
-                      <RefreshLineIcon className="w-4 h-4 mr-2" />
-                      刷新
+                    <Button variant="ghost" size="sm" onClick={loadHistory} className="font-sans">
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {t('search.refresh')}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleClearHistory}>
-                      清空
+                    <Button variant="outline" size="sm" onClick={handleClearHistory} className="font-sans">
+                      {t('search.clear')}
                     </Button>
                   </div>
                 </div>
                 <div className="space-y-2 max-h-72 overflow-auto pr-1">
                   {history.map((h) => (
-                    <div key={h.task_id} className="border border-border/60 rounded-lg p-3 flex items-center justify-between hover:bg-card/60 transition">
+                    <div key={h.task_id} className="border border-border/60 rounded-lg p-3 flex items-center justify-between hover:bg-card/60 transition bg-background">
                       <div>
-                        <div className="text-sm font-semibold">{h.platform} · {h.total} 篇</div>
-                        <div className="text-xs text-muted-foreground">开始：{formatTime(h.start_time)}</div>
-                        <div className="text-xs text-muted-foreground">结束：{formatTime(h.end_time)}</div>
+                        <div className="text-sm font-semibold font-sans">{h.platform} · {h.total} papers</div>
+                        <div className="text-xs text-muted-foreground font-mono">Start: {formatTime(h.start_time)}</div>
+                        <div className="text-xs text-muted-foreground font-mono">End: {formatTime(h.end_time)}</div>
                       </div>
                       <Button
                         size="sm"
                         variant="secondary"
+                        className="font-sans"
                         onClick={() => window.location.hash = `#/library?taskId=${h.task_id}`}
                       >
-                        查看库
+                        View Library
                       </Button>
                     </div>
                   ))}
@@ -618,43 +625,43 @@ const SearchView: React.FC = () => {
               onValueChange={(value) => setCrawlParams(prev => ({ ...prev, platform: value as any }))}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-4 p-1 bg-secondary/50">
-                <TabsTrigger value="arxiv" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
+              <TabsList className="grid w-full grid-cols-4 p-1 bg-secondary/30 font-sans">
+                <TabsTrigger value="arxiv" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   arXiv
                 </TabsTrigger>
-                <TabsTrigger value="acl" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger value="acl" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   ACL Anthology
                 </TabsTrigger>
-                <TabsTrigger value="openreview" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger value="openreview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   OpenReview
                 </TabsTrigger>
-                <TabsTrigger value="ssrn" className="data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsTrigger value="ssrn" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   SSRN
                 </TabsTrigger>
               </TabsList>
 
               {/* Platform-specific Parameters */}
               <TabsContent value={crawlParams.platform} className="space-y-6 mt-6">
-                <div className="glass-card p-6 rounded-xl space-y-6">
+                <div className="p-6 rounded-xl border border-border/40 bg-card/30 space-y-6">
                   {/* arXiv Parameters */}
                   {crawlParams.platform === 'arxiv' && (
                     <>
                       {/* Keywords */}
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <PriceTag3LineIcon className="w-4 h-4" />
-                          关键词 (Keywords)
+                        <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                          <Tags className="w-4 h-4" />
+                          {t('search.keywords')}
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            placeholder="例如: machine learning, deep learning"
+                            placeholder="e.g.: machine learning, deep learning"
                             value={keywordInput}
                             onChange={(e) => setKeywordInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && addKeyword()}
-                            className="flex-1"
+                            className="flex-1 font-sans"
                           />
-                          <Button onClick={addKeyword} variant="outline" size="sm">
-                            添加
+                          <Button onClick={addKeyword} variant="outline" size="sm" className="font-sans">
+                            {t('search.add')}
                           </Button>
                         </div>
                         {crawlParams.keywords.length > 0 && (
@@ -662,7 +669,7 @@ const SearchView: React.FC = () => {
                             {crawlParams.keywords.map((keyword, index) => (
                               <div
                                 key={index}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-sans"
                               >
                                 <span>{keyword}</span>
                                 <button
@@ -679,20 +686,20 @@ const SearchView: React.FC = () => {
 
                       {/* Categories */}
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <HashtagIcon className="w-4 h-4" />
-                          类别 (Categories)
+                        <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                          <Hash className="w-4 h-4" />
+                          {t('search.categories')}
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            placeholder="例如: cs.AI, cs.LG, cs.CL"
+                            placeholder="e.g.: cs.AI, cs.LG, cs.CL"
                             value={categoryInput}
                             onChange={(e) => setCategoryInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-                            className="flex-1"
+                            className="flex-1 font-sans"
                           />
-                          <Button onClick={addCategory} variant="outline" size="sm">
-                            添加
+                          <Button onClick={addCategory} variant="outline" size="sm" className="font-sans">
+                            {t('search.add')}
                           </Button>
                         </div>
                         {crawlParams.categories.length > 0 && (
@@ -700,7 +707,7 @@ const SearchView: React.FC = () => {
                             {crawlParams.categories.map((category, index) => (
                               <div
                                 key={index}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-info/10 text-info rounded-full text-sm"
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-info/10 text-info rounded-full text-sm font-mono"
                               >
                                 <span>{category}</span>
                                 <button
@@ -713,8 +720,8 @@ const SearchView: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          常用类别: cs.AI (人工智能), cs.LG (机器学习), cs.CL (计算语言学), cs.CV (计算机视觉)
+                        <p className="text-xs text-muted-foreground font-sans">
+                          Common: cs.AI, cs.LG, cs.CL, cs.CV
                         </p>
                       </div>
                     </>
@@ -723,18 +730,18 @@ const SearchView: React.FC = () => {
                   {/* OpenReview Parameters */}
                   {crawlParams.platform === 'openreview' && (
                     <div className="space-y-3">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <HashtagIcon className="w-4 h-4" />
-                        会议名称 (Venue ID)
+                      <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                        <Hash className="w-4 h-4" />
+                        {t('search.venueId')}
                       </Label>
                       <Input
-                        placeholder="例如: ICLR.cc/2026/Conference/Submission"
+                        placeholder="e.g.: ICLR.cc/2026/Conference/Submission"
                         value={crawlParams.venueId}
                         onChange={(e) => setCrawlParams(prev => ({ ...prev, venueId: e.target.value }))}
-                        className="flex-1"
+                        className="flex-1 font-mono text-sm"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        OpenReview 只支持按会议名称检索，不支持关键词搜索
+                      <p className="text-xs text-muted-foreground font-sans">
+                        OpenReview only supports crawling by Venue ID.
                       </p>
                     </div>
                   )}
@@ -742,9 +749,9 @@ const SearchView: React.FC = () => {
                   {/* ACL Parameters */}
                   {crawlParams.platform === 'acl' && (
                     <div className="space-y-3">
-                      <Label className="text-sm font-medium">检索模式</Label>
+                      <Label className="text-sm font-medium font-sans">{t('search.retrievalMode')}</Label>
                       <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors font-sans">
                           <Checkbox
                             checked={crawlParams.useRSS}
                             onCheckedChange={(checked: boolean) => 
@@ -755,9 +762,9 @@ const SearchView: React.FC = () => {
                               }))
                             }
                           />
-                          <span>RSS 模式 (获取最新 1000 篇论文)</span>
+                          <span>{t('search.rssMode')}</span>
                         </label>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors font-sans">
                           <Checkbox
                             checked={crawlParams.useBibTeX}
                             onCheckedChange={(checked: boolean) => 
@@ -768,11 +775,11 @@ const SearchView: React.FC = () => {
                               }))
                             }
                           />
-                          <span>BibTeX 模式 (获取全量论文数据)</span>
+                          <span>{t('search.bibtexMode')}</span>
                         </label>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        ACL Anthology 不支持关键词搜索，只能获取最新或全量论文
+                      <p className="text-xs text-muted-foreground font-sans">
+                        ACL Anthology retrieval is based on latest RSS feed or full BibTeX dump.
                       </p>
                     </div>
                   )}
@@ -782,20 +789,20 @@ const SearchView: React.FC = () => {
                     <>
                       {/* Keywords */}
                       <div className="space-y-3">
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <PriceTag3LineIcon className="w-4 h-4" />
-                          关键词 (Keywords)
+                        <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                          <Tags className="w-4 h-4" />
+                          {t('search.keywords')}
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            placeholder="例如: machine learning, finance, economics"
+                            placeholder="e.g.: machine learning, finance"
                             value={keywordInput}
                             onChange={(e) => setKeywordInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
-                            className="flex-1"
+                            className="flex-1 font-sans"
                           />
-                          <Button onClick={addKeyword} variant="outline" size="sm">
-                            添加
+                          <Button onClick={addKeyword} variant="outline" size="sm" className="font-sans">
+                            {t('search.add')}
                           </Button>
                         </div>
                         {crawlParams.keywords.length > 0 && (
@@ -803,7 +810,7 @@ const SearchView: React.FC = () => {
                             {crawlParams.keywords.map((keyword, index) => (
                               <div
                                 key={index}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-sans"
                               >
                                 <span>{keyword}</span>
                                 <button
@@ -816,8 +823,8 @@ const SearchView: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          SSRN 支持关键词搜索，不支持类别和日期筛选
+                        <p className="text-xs text-muted-foreground font-sans">
+                          SSRN supports keywords only.
                         </p>
                       </div>
                     </>
@@ -829,25 +836,27 @@ const SearchView: React.FC = () => {
                       <Separator className="bg-border/50" />
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium flex items-center gap-2">
-                            <CalendarLineIcon className="w-4 h-4" />
-                            开始日期 (From)
+                          <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                            <Calendar className="w-4 h-4" />
+                            {t('search.dateFrom')}
                           </Label>
                           <Input
                             type="date"
                             value={crawlParams.dateFrom}
                             onChange={(e) => setCrawlParams(prev => ({ ...prev, dateFrom: e.target.value }))}
+                            className="font-sans"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium flex items-center gap-2">
-                            <CalendarLineIcon className="w-4 h-4" />
-                            结束日期 (Until)
+                          <Label className="text-sm font-medium flex items-center gap-2 font-sans">
+                            <Calendar className="w-4 h-4" />
+                            {t('search.dateUntil')}
                           </Label>
                           <Input
                             type="date"
                             value={crawlParams.dateUntil}
                             onChange={(e) => setCrawlParams(prev => ({ ...prev, dateUntil: e.target.value }))}
+                            className="font-sans"
                           />
                         </div>
                       </div>
@@ -858,17 +867,18 @@ const SearchView: React.FC = () => {
 
                   {/* Limit */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      数量限制 (Limit)
+                    <Label className="text-sm font-medium font-sans">
+                      {t('search.limit')}
                     </Label>
                     <Input
                       type="number"
                       value={crawlParams.limit}
                       onChange={(e) => setCrawlParams(prev => ({ ...prev, limit: parseInt(e.target.value) || 0 }))}
-                      placeholder="0 表示无限制"
+                      placeholder="0 for unlimited"
+                      className="font-sans"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      设置为 0 表示不限制爬取数量
+                    <p className="text-xs text-muted-foreground font-sans">
+                      0 means no limit.
                     </p>
                   </div>
 
@@ -876,27 +886,27 @@ const SearchView: React.FC = () => {
 
                   {/* Options - Platform specific */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">选项</Label>
+                    <Label className="text-sm font-medium font-sans">{t('search.options')}</Label>
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors font-sans">
                         <Checkbox
                           checked={crawlParams.update}
                           onCheckedChange={(checked: boolean) => 
                             setCrawlParams(prev => ({ ...prev, update: checked }))
                           }
                         />
-                        <span>增量更新模式 (Update Mode)</span>
+                        <span>{t('search.updateMode')}</span>
                       </label>
                       {/* API选项只对arXiv显示 */}
                       {crawlParams.platform === 'arxiv' && (
-                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors font-sans">
                           <Checkbox
                             checked={crawlParams.useAPI}
                             onCheckedChange={(checked: boolean) => 
                               setCrawlParams(prev => ({ ...prev, useAPI: checked }))
                             }
                           />
-                          <span>使用官方 API (Use Official API)</span>
+                          <span>{t('search.useApi')}</span>
                         </label>
                       )}
                     </div>
@@ -908,14 +918,14 @@ const SearchView: React.FC = () => {
             <Separator className="bg-border/50" />
 
             {/* Action Bar */}
-            <div className="glass-card p-4 rounded-xl">
+            <div className="p-4 rounded-xl bg-card/30 border border-border/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                    <SettingsLineIcon className="w-4 h-4 text-muted-foreground" />
+                    <Settings className="w-4 h-4 text-muted-foreground" />
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    配置参数来自 Settings 页面
+                  <div className="text-sm text-muted-foreground font-sans">
+                    Parameters from Settings page are applied automatically.
                   </div>
                 </div>
                 <Button
@@ -932,17 +942,17 @@ const SearchView: React.FC = () => {
                     crawlParams.keywords.length === 0
                   )}
                   size="lg"
-                  className="bg-primary hover:bg-primary/90 transition-all duration-300 h-11 px-8"
+                  className="bg-anthropic-dark text-anthropic-light hover:bg-anthropic-dark/90 transition-all duration-300 h-11 px-8 font-sans"
                 >
                   {isCrawling ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                      Task Running...
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      {t('search.running')}
                     </>
                   ) : (
                     <>
-                      <PlayLineIcon className="mr-2 h-5 w-5" />
-                      Start Crawl
+                      <Play className="mr-2 h-5 w-5" />
+                      {t('search.startCrawl')}
                     </>
                   )}
                 </Button>
@@ -954,16 +964,16 @@ const SearchView: React.FC = () => {
 
       {/* 导出配置弹窗 */}
       <AlertDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <AlertDialogContent className="sm:max-w-lg">
+        <AlertDialogContent className="sm:max-w-lg font-sans">
           <AlertDialogHeader>
-            <AlertDialogTitle>导出本次爬取结果</AlertDialogTitle>
+            <AlertDialogTitle>{t('export.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              选择导出格式并填写必要信息，确认后立即导出。
+              {t('export.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">导出格式</Label>
+              <Label className="text-sm font-medium">{t('export.format')}</Label>
               <div className="grid grid-cols-4 gap-2">
                 {(['csv','json','feishu','zotero'] as const).map(fmt => (
                   <Button
@@ -980,40 +990,40 @@ const SearchView: React.FC = () => {
 
             {(exportDialogFormat === 'csv' || exportDialogFormat === 'json') && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">输出路径</Label>
+                <Label className="text-sm font-medium">{t('export.outputPath')}</Label>
                 <Input
                   value={exportDialogPath}
                   onChange={(e) => setExportDialogPath(e.target.value)}
-                  placeholder="例如: out/papers.csv"
+                  placeholder="e.g.: out/papers.csv"
                 />
-                <p className="text-xs text-muted-foreground">未填写将自动生成文件名</p>
+                <p className="text-xs text-muted-foreground">Auto-generated if empty</p>
               </div>
             )}
 
             {exportDialogFormat === 'feishu' && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">飞书数据集名称</Label>
+                <Label className="text-sm font-medium">{t('export.feishuName')}</Label>
                 <Input
                   value={exportDialogFeishu}
                   onChange={(e) => setExportDialogFeishu(e.target.value)}
-                  placeholder="例如：论文数据集"
+                  placeholder="e.g.: Papers Dataset"
                 />
               </div>
             )}
 
             {exportDialogFormat === 'zotero' && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Zotero Collection Key（可选）</Label>
+                <Label className="text-sm font-medium">{t('export.collectionKey')}</Label>
                 <Input
                   value={exportDialogCollection}
                   onChange={(e) => setExportDialogCollection(e.target.value)}
-                  placeholder="如 ABC123XY"
+                  placeholder="e.g. ABC123XY"
                 />
               </div>
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 await handleExportCurrentTask(exportDialogFormat, {
@@ -1024,7 +1034,7 @@ const SearchView: React.FC = () => {
                 setExportDialogOpen(false);
               }}
             >
-              确认导出
+              {t('common.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

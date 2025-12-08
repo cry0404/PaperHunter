@@ -28,13 +28,11 @@ type RecommendOptions struct {
 	LocalFileAction    string   `json:"localFileAction"`    // 本地文件操作
 }
 
-
 type AgentLogEntry struct {
 	Type      string `json:"type"`      // "user", "assistant", "tool_call", "tool_result"
 	Content   string `json:"content"`   // 消息内容
 	Timestamp string `json:"timestamp"` // 时间戳
 }
-
 
 type RecommendResult struct {
 	CrawledToday    bool                  `json:"crawledToday"`
@@ -45,12 +43,10 @@ type RecommendResult struct {
 	AgentLogs       []AgentLogEntry       `json:"agentLogs"`
 }
 
-
 type UserIntent struct {
 	GeneratedTitle    string `json:"generated_title"`
 	GeneratedAbstract string `json:"generated_abstract"`
 }
-
 
 func (a *App) logAndEmit(log AgentLogEntry) {
 	if a.ctx != nil {
@@ -208,7 +204,6 @@ func (a *App) GetDailyRecommendations(opts RecommendOptions) (string, error) {
 			Timestamp: time.Now().Format(time.RFC3339),
 		})
 	}
-
 
 	result, err := a.getDailyRecommendationsDirect(opts, agentLogs)
 	if err != nil {

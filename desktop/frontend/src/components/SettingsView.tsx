@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
-import { Save, RefreshCw, Settings, Sparkles, Database as DatabaseIcon, BookOpen, Globe, Palette, Moon, Sun, Monitor } from 'lucide-react';
+import { 
+  Save, 
+  RefreshCw, 
+  Settings, 
+  Sparkles, 
+  Database as DatabaseIcon, 
+  BookOpen, 
+  Globe, 
+  Palette, 
+  Moon, 
+  Sun, 
+  Monitor, 
+  Languages,
+  BookMarked,
+  Share2
+} from 'lucide-react';
 import { GetConfig, UpdateConfig } from '../../wailsjs/go/main/App';
 import * as models from '../../wailsjs/go/models';
 import { useToast } from './ui/use-toast';
@@ -18,22 +34,24 @@ interface Config {
   database: {
     path: string;
   };
-  zotero: {
-    user_id: string;
-    api_key: string;
+  llm?: {
+    baseurl: string;
+    modelname: string;
+    apikey: string;
   };
-  arxiv: {
-    proxy: string;
-    step: number;
-    timeout: number;
+  zotero?: {
+    userid: string;
+    apikey: string;
+    librarytype: string;
   };
-  openreview: {
-    proxy: string;
-    timeout: number;
+  feishu?: {
+    appid: string;
+    appsecret: string;
   };
 }
 
 const SettingsView: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [config, setConfig] = useState<models.config.AppConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,17 +65,17 @@ const SettingsView: React.FC = () => {
       setConfig(cfg);
       
       toast({
-        title: "配置加载成功",
-        description: "已获取最新配置信息",
-        duration: 2000, // 3秒后消失
+        title: t('common.success'),
+        description: "Configuration loaded successfully",
+        duration: 2000,
       });
     } catch (error) {
       console.error('Failed to load config:', error);
       toast({
-        title: "配置加载失败",
-        description: "无法获取配置信息，请重试",
+        title: t('common.error'),
+        description: "Failed to load configuration",
         variant: "destructive",
-        duration: 3000, // 错误信息显示5秒
+        duration: 3000,
       });
     } finally {
       setLoading(false);
@@ -73,17 +91,17 @@ const SettingsView: React.FC = () => {
       console.log('Saving config:', config);
       
       toast({
-        title: "配置保存成功",
-        description: "应用已成功重载，新配置已生效",
-        duration: 4000, // 成功信息显示4秒
+        title: t('common.success'),
+        description: "Configuration saved successfully",
+        duration: 3000,
       });
     } catch (error) {
       console.error('Failed to save config:', error);
       toast({
-        title: "配置保存失败",
-        description: "请检查配置是否正确，然后重试",
+        title: t('common.error'),
+        description: "Failed to save configuration",
         variant: "destructive",
-        duration: 6000, // 错误信息显示6秒，让用户有足够时间阅读
+        duration: 5000,
       });
     } finally {
       setSaving(false);
@@ -96,27 +114,26 @@ const SettingsView: React.FC = () => {
 
   if (loading || !config) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-background">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading configuration...</p>
+          <p className="text-muted-foreground font-sans">{t('common.loading')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-        <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
+        <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-8 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-
-                <CardTitle className="text-3xl font-display font-semibold ">Settings</CardTitle>
+                <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('settings.title')}</CardTitle>
               </div>
-              <CardDescription className="text-base text-muted-foreground ml-13">
-                配置密钥等相关内容
+              <CardDescription className="text-base text-muted-foreground font-serif">
+                {t('settings.subtitle')}
               </CardDescription>
             </div>
             
@@ -126,92 +143,115 @@ const SettingsView: React.FC = () => {
                 disabled={loading}
                 size="sm"
                 variant="outline"
+                className="font-sans"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Reload
+                {t('settings.reload')}
               </Button>
               
               <Button
                 onClick={saveConfig}
                 disabled={saving}
                 size="sm"
+                className="font-sans bg-anthropic-dark text-anthropic-light hover:bg-anthropic-dark/90"
               >
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t('settings.saving') : t('settings.save')}
               </Button>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto overflow-x-hidden px-8 py-8" style={{ overflowY: 'auto' }}>
-          <div className="max-w-4xl mx-auto space-y-8">
+        <CardContent className="flex-1 overflow-y-auto px-8 py-8">
+          <div className="max-w-4xl mx-auto space-y-8 pb-12">
+            
             {/* Appearance Settings */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Palette className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">
-                  Appearance
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Palette className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">
+                  {t('settings.appearance.title')}
                 </h3>
-                <span className="text-sm text-muted-foreground">(界面外观)</span>
               </div>
-              <div>
-                <label className="text-sm font-medium block mb-3">Theme Mode</label>
-                <div className="grid grid-cols-3 gap-4">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'outline'}
-                    className={`justify-start h-auto py-3 px-4 ${theme === 'light' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                    onClick={() => setTheme('light')}
-                  >
-                    <Sun className="w-4 h-4 mr-2" />
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">Light</span>
-                      <span className="text-xs opacity-70">明亮模式</span>
-                    </div>
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'outline'}
-                    className={`justify-start h-auto py-3 px-4 ${theme === 'dark' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                    onClick={() => setTheme('dark')}
-                  >
-                    <Moon className="w-4 h-4 mr-2" />
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">Dark</span>
-                      <span className="text-xs opacity-70">暗黑模式</span>
-                    </div>
-                  </Button>
-                  <Button
-                    variant={theme === 'system' ? 'default' : 'outline'}
-                    className={`justify-start h-auto py-3 px-4 ${theme === 'system' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                    onClick={() => setTheme('system')}
-                  >
-                    <Monitor className="w-4 h-4 mr-2" />
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">System</span>
-                      <span className="text-xs opacity-70">跟随系统</span>
-                    </div>
-                  </Button>
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30 space-y-6">
+                
+                {/* Theme Mode */}
+                <div>
+                  <label className="text-sm font-medium block mb-4 font-sans">{t('settings.appearance.theme')}</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    {(['light', 'dark', 'system'] as const).map((mode) => (
+                      <Button
+                        key={mode}
+                        variant={theme === mode ? 'default' : 'outline'}
+                        className={`justify-start h-auto py-3 px-4 font-sans ${
+                          theme === mode ? 'ring-2 ring-primary ring-offset-2' : ''
+                        }`}
+                        onClick={() => setTheme(mode)}
+                      >
+                        {mode === 'light' && <Sun className="w-4 h-4 mr-2" />}
+                        {mode === 'dark' && <Moon className="w-4 h-4 mr-2" />}
+                        {mode === 'system' && <Monitor className="w-4 h-4 mr-2" />}
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium capitalize">
+                            {mode === 'light' ? t('settings.appearance.light') : 
+                             mode === 'dark' ? t('settings.appearance.dark') : 
+                             t('settings.appearance.system')}
+                          </span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+
+                <Separator className="bg-border/20" />
+
+                {/* Language */}
+                <div>
+                  <label className="text-sm font-medium block mb-4 font-sans">{t('settings.appearance.language')}</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      variant={i18n.language === 'en' ? 'default' : 'outline'}
+                      className={`justify-start h-auto py-3 px-4 font-sans ${
+                        i18n.language === 'en' ? 'ring-2 ring-primary ring-offset-2' : ''
+                      }`}
+                      onClick={() => i18n.changeLanguage('en')}
+                    >
+                      <Languages className="w-4 h-4 mr-2" />
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">English</span>
+                      </div>
+                    </Button>
+                    <Button
+                      variant={i18n.language === 'zh' ? 'default' : 'outline'}
+                      className={`justify-start h-auto py-3 px-4 font-sans ${
+                        i18n.language === 'zh' ? 'ring-2 ring-primary ring-offset-2' : ''
+                      }`}
+                      onClick={() => i18n.changeLanguage('zh')}
+                    >
+                      <Globe className="w-4 h-4 mr-2" />
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">中文</span>
+                      </div>
+                    </Button>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <Separator className="bg-border/50" />
+            <Separator className="bg-border/40" />
 
             {/* Embedder Configuration */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">
-                  Embedding Service
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">
+                  {t('settings.embedding.title')}
                 </h3>
-                <span className="text-sm text-muted-foreground">(向量搜索相关)</span>
               </div>
-              <div className="grid gap-4">
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
                 <div>
-                  <label className="text-sm font-medium block mb-2">API Base URL</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.baseUrl')}</label>
                   <input
                     type="text"
                     value={config.Embedder.BaseURL}
@@ -221,13 +261,13 @@ const SettingsView: React.FC = () => {
                         Embedder: { ...config.Embedder, BaseURL: e.target.value }
                       })
                     )}
-                    className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="国内推荐: https://api.siliconflow.cn/v1"
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/20 transition-all"
+                    placeholder="https://api.siliconflow.cn/v1"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">API Key</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.apiKey')}</label>
                   <input
                     type="password"
                     value={config.Embedder.APIKey}
@@ -237,14 +277,14 @@ const SettingsView: React.FC = () => {
                         Embedder: { ...config.Embedder, APIKey: e.target.value }
                       })
                     )}
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/20 transition-all"
                     placeholder="sk-..."
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="text-sm font-medium">Model Name</label>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.modelName')}</label>
                     <input
                       type="text"
                       value={config.Embedder.ModelName}
@@ -254,13 +294,13 @@ const SettingsView: React.FC = () => {
                           Embedder: { ...config.Embedder, ModelName: e.target.value }
                         })
                       )}
-                      className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                      className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                       placeholder="text-embedding-3-small"
                     />
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium">Dimension</label>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.dimension')}</label>
                     <input
                       type="number"
                       value={config.Embedder.Dim}
@@ -270,7 +310,7 @@ const SettingsView: React.FC = () => {
                           Embedder: { ...config.Embedder, Dim: parseInt(e.target.value) }
                         })
                       )}
-                      className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                      className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                       placeholder="1536"
                     />
                   </div>
@@ -278,18 +318,16 @@ const SettingsView: React.FC = () => {
               </div>
             </div>
 
-            <Separator className="bg-border/50" />
+            <Separator className="bg-border/40" />
 
             {/* Database Configuration */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
-                  <DatabaseIcon className="w-4 h-4 text-info" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">Database</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DatabaseIcon className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">{t('settings.database.title')}</h3>
               </div>
-              <div>
-                <label className="text-sm font-medium">Database Path</label>
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30">
+                <label className="text-sm font-medium block mb-2 font-sans">{t('settings.database.path')}</label>
                 <input
                   type="text"
                   value={config.Database.Path}
@@ -299,456 +337,25 @@ const SettingsView: React.FC = () => {
                       Database: { ...config.Database, Path: e.target.value }
                     })
                   )}
-                  className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                  className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                   placeholder="~/.quicksearch/quicksearch.db"
                 />
               </div>
             </div>
 
-            <Separator className="bg-border/50" />
-
-            {/* Zotero Integration */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-success" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">Zotero Integration</h3>
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium">User ID</label>
-                  <input
-                    type="text"
-                    value={config.Zotero.UserID}
-                    onChange={(e) => setConfig(
-                      models.config.AppConfig.createFrom({
-                        ...config,
-                        Zotero: { ...config.Zotero, UserID: e.target.value }
-                      })
-                    )}
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                    placeholder="12345678"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">API Key</label>
-                  <input
-                    type="password"
-                    value={config.Zotero.APIKey}
-                    onChange={(e) => setConfig(
-                      models.config.AppConfig.createFrom({
-                        ...config,
-                        Zotero: { ...config.Zotero, APIKey: e.target.value }
-                      })
-                    )}
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                    placeholder="Zotero API key"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* FeiShu Integration */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-success" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">FeiShu Integration</h3>
-              </div>
-
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium">App ID</label>
-                  <input
-                    type="text"
-                    value={config.FeiShu.AppID}
-                    onChange={(e) =>
-                      setConfig(
-                        models.config.AppConfig.createFrom({
-                          ...config,
-                          FeiShu: models.core.FeiShuConfig.createFrom({
-                            AppID: e.target.value,
-                            AppSecret: config.FeiShu.AppSecret,
-                          }),
-                        })
-                      )
-                    }
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                    placeholder="cli_xxx"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">App Secret</label>
-                  <input
-                    type="password"
-                    value={config.FeiShu.AppSecret}
-                    onChange={(e) =>
-                      setConfig(
-                        models.config.AppConfig.createFrom({
-                          ...config,
-                          FeiShu: models.core.FeiShuConfig.createFrom({
-                            AppID: config.FeiShu.AppID,
-                            AppSecret: e.target.value,
-                          }),
-                        })
-                      )
-                    }
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                    placeholder="******"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator className="bg-border/50" />
-
-            {/* Platform Settings */}
-            <div className="glass-card p-6 rounded-2xl space-y-8">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-warning" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">Platform Settings</h3>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-medium mb-3">arXiv</h4>
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Proxy</label>
-                      <input
-                        type="text"
-                        value={config.Arxiv.Proxy}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            Arxiv: { ...config.Arxiv, Proxy: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="http://127.0.0.1:7890"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Step Size</label>
-                        <input
-                          type="number"
-                          value={config.Arxiv.Step}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              Arxiv: { ...config.Arxiv, Step: parseInt(e.target.value)}
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Timeout (s)</label>
-                        <input
-                          type="number"
-                          value={config.Arxiv.Timeout}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              Arxiv: { ...config.Arxiv, Timeout: parseInt(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">ACL Anthology</h4>
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Base URL</label>
-                      <input
-                        type="text"
-                        value={config.ACL.BaseURL}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            ACL: { ...config.ACL, BaseURL: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="https://aclanthology.org"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Proxy</label>
-                      <input
-                        type="text"
-                        value={config.ACL.Proxy}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            ACL: { ...config.ACL, Proxy: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="http://127.0.0.1:7890"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Step Size</label>
-                        <input
-                          type="number"
-                          value={config.ACL.Step}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              ACL: { ...config.ACL, Step: parseInt(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Timeout (s)</label>
-                        <input
-                          type="number"
-                          value={config.ACL.Timeout}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              ACL: { ...config.ACL, Timeout: parseInt(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                          placeholder="600"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="acl-use-rss"
-                          checked={config.ACL.UseRSS}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              ACL: { ...config.ACL, UseRSS: e.target.checked }
-                            })
-                          )}
-                          className="rounded border-input"
-                        />
-                        <label htmlFor="acl-use-rss" className="text-sm font-medium text-muted-foreground">
-                          Use RSS (获取最新 1000 篇)
-                        </label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="acl-use-bibtex"
-                          checked={config.ACL.UseBibTeX}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              ACL: { ...config.ACL, UseBibTeX: e.target.checked }
-                            })
-                          )}
-                          className="rounded border-input"
-                        />
-                        <label htmlFor="acl-use-bibtex" className="text-sm font-medium text-muted-foreground">
-                          Use BibTeX (全量数据)
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">OpenReview</h4>
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Proxy</label>
-                      <input
-                        type="text"
-                        value={config.OpenReview.Proxy}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            OpenReview: { ...config.OpenReview, Proxy: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="http://127.0.0.1:7890"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Timeout (s)</label>
-                      <input
-                        type="number"
-                        value={config.OpenReview.Timeout}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            OpenReview: { ...config.OpenReview, Timeout: parseInt(e.target.value) }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">SSRN</h4>
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Base URL</label>
-                      <input
-                        type="text"
-                        value={config.SSRN.BaseURL}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            SSRN: { ...config.SSRN, BaseURL: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="https://papers.ssrn.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Proxy</label>
-                      <input
-                        type="text"
-                        value={config.SSRN.Proxy}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            SSRN: { ...config.SSRN, Proxy: e.target.value }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        placeholder="http://127.0.0.1:7890"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Timeout (s)</label>
-                      <input
-                        type="number"
-                        value={config.SSRN.Timeout}
-                        onChange={(e) => setConfig(
-                          models.config.AppConfig.createFrom({
-                            ...config,
-                            SSRN: { ...config.SSRN, Timeout: parseInt(e.target.value) }
-                          })
-                        )}
-                        className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Page Size</label>
-                        <input
-                          type="number"
-                          value={config.SSRN.PageSize}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              SSRN: { ...config.SSRN, PageSize: parseInt(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Max Pages</label>
-                        <input
-                          type="number"
-                          value={config.SSRN.MaxPages}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              SSRN: { ...config.SSRN, MaxPages: parseInt(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Rate Limit (per second)</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          value={config.SSRN.RateLimitPerSecond}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              SSRN: { ...config.SSRN, RateLimitPerSecond: parseFloat(e.target.value) }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Sort</label>
-                        <input
-                          type="text"
-                          value={config.SSRN.Sort}
-                          onChange={(e) => setConfig(
-                            models.config.AppConfig.createFrom({
-                              ...config,
-                              SSRN: { ...config.SSRN, Sort: e.target.value }
-                            })
-                          )}
-                          className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                          placeholder="AB_Date_D"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <Separator className="bg-border/50" />
+            <Separator className="bg-border/40" />
 
             {/* LLM Configuration */}
-            <div className="glass-card p-6 rounded-2xl space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="text-lg font-display font-semibold text-foreground">
-                  LLM Configuration
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">
+                  {t('settings.llm.title')}
                 </h3>
-                <span className="text-sm text-muted-foreground">(用于 Agent)</span>
               </div>
-              <div className="grid gap-4">
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
                 <div>
-                  <label className="text-sm font-medium block mb-2">API Base URL</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.llm.baseUrl')}</label>
                   <input
                     type="text"
                     value={config.LLM?.BaseURL || ''}
@@ -762,13 +369,13 @@ const SettingsView: React.FC = () => {
                         })
                       })
                     )}
-                    className="w-full px-4 py-3 bg-background/50 border border-input rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                     placeholder="https://openrouter.ai/api/v1"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Model Name</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.llm.modelName')}</label>
                   <input
                     type="text"
                     value={config.LLM?.ModelName || ''}
@@ -782,13 +389,13 @@ const SettingsView: React.FC = () => {
                         })
                       })
                     )}
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
-                    placeholder="deepseek/deepseek-v3"
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                    placeholder="anthropic/claude-3-haiku"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">API Key</label>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('settings.llm.apiKey')}</label>
                   <input
                     type="password"
                     value={config.LLM?.APIKey || ''}
@@ -802,29 +409,156 @@ const SettingsView: React.FC = () => {
                         })
                       })
                     )}
-                    className="mt-1 w-full px-3 py-2 bg-background border border-input rounded-md text-sm"
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                     placeholder="sk-..."
                   />
                 </div>
               </div>
             </div>
+
+            <Separator className="bg-border/40" />
+
+            {/* Zotero Configuration */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BookMarked className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">
+                  {t('zotero.title')}
+                </h3>
+              </div>
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.userId')}</label>
+                    <input
+                      type="text"
+                      value={config.Zotero?.UserID || ''}
+                      onChange={(e) => setConfig(
+                        models.config.AppConfig.createFrom({
+                          ...config,
+                          Zotero: { 
+                            ...config.Zotero, 
+                            UserID: e.target.value,
+                            APIKey: config.Zotero?.APIKey || '',
+                            LibraryType: config.Zotero?.LibraryType || 'user'
+                          }
+                        })
+                      )}
+                      className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                      placeholder="1234567"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.libraryType')}</label>
+                    <select
+                      value={config.Zotero?.LibraryType || 'user'}
+                      onChange={(e) => setConfig(
+                        models.config.AppConfig.createFrom({
+                          ...config,
+                          Zotero: { 
+                            ...config.Zotero, 
+                            LibraryType: e.target.value,
+                            UserID: config.Zotero?.UserID || '',
+                            APIKey: config.Zotero?.APIKey || ''
+                          }
+                        })
+                      )}
+                      className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                    >
+                      <option value="user">{t('zotero.user')}</option>
+                      <option value="group">{t('zotero.group')}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('zotero.apiKey')}</label>
+                  <input
+                    type="password"
+                    value={config.Zotero?.APIKey || ''}
+                    onChange={(e) => setConfig(
+                      models.config.AppConfig.createFrom({
+                        ...config,
+                        Zotero: { 
+                          ...config.Zotero, 
+                          APIKey: e.target.value,
+                          UserID: config.Zotero?.UserID || '',
+                          LibraryType: config.Zotero?.LibraryType || 'user'
+                        }
+                      })
+                    )}
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                    placeholder="key..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator className="bg-border/40" />
+
+            {/* Feishu Configuration */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Share2 className="w-5 h-5 text-primary" />
+                <h3 className="text-lg font-sans font-medium text-foreground">
+                  {t('feishu.title')}
+                </h3>
+              </div>
+              <div className="p-6 rounded-xl border border-border/40 bg-card/30 grid gap-5">
+                <div>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('feishu.appId')}</label>
+                  <input
+                    type="text"
+                    value={config.FeiShu?.AppID || ''}
+                    onChange={(e) => setConfig(
+                      models.config.AppConfig.createFrom({
+                        ...config,
+                        FeiShu: { 
+                          ...config.FeiShu, 
+                          AppID: e.target.value,
+                          AppSecret: config.FeiShu?.AppSecret || ''
+                        }
+                      })
+                    )}
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                    placeholder="cli_..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-2 font-sans">{t('feishu.appSecret')}</label>
+                  <input
+                    type="password"
+                    value={config.FeiShu?.AppSecret || ''}
+                    onChange={(e) => setConfig(
+                      models.config.AppConfig.createFrom({
+                        ...config,
+                        FeiShu: { 
+                          ...config.FeiShu, 
+                          AppSecret: e.target.value,
+                          AppID: config.FeiShu?.AppID || ''
+                        }
+                      })
+                    )}
+                    className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
+                    placeholder="..."
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-4 bg-secondary/30 rounded-lg border border-border/50">
+              <Settings className="w-5 h-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground font-sans">
+                Make sure to save your changes before leaving this page.
+              </p>
+            </div>
+
           </div>
         </CardContent>
-
-          <div className="border-t border-border/30 px-8 py-4 bg-card/30 backdrop-blur-sm flex-shrink-0">
-          <div className="flex items-center gap-3 max-w-4xl mx-auto">
-            <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
-              <Settings className="w-4 h-4 text-info" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              更新配置后请先保存再重载
-            </p>
-          </div>
-        </div>
       </Card>
     </div>
   );
 };
 
 export default SettingsView;
-

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,14 +8,19 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
 
-import SearchLineIcon from 'remixicon-react/SearchLineIcon';
-import DownloadLineIcon from 'remixicon-react/DownloadLineIcon';
-import RefreshLineIcon from 'remixicon-react/RefreshLineIcon';
-import ExternalLinkLineIcon from 'remixicon-react/ExternalLinkLineIcon';
-import BookOpenLineIcon from 'remixicon-react/BookOpenLineIcon';
-import CalendarLineIcon from 'remixicon-react/CalendarLineIcon';
-import FileCopyLineIcon from 'remixicon-react/FileCopyLineIcon';
-import ArrowLeftLineIcon from 'remixicon-react/ArrowLeftLineIcon';
+import { 
+  Search, 
+  Download, 
+  RefreshCcw, 
+  ExternalLink, 
+  BookOpen, 
+  Calendar, 
+  Copy, 
+  ArrowLeft,
+  FileJson,
+  Loader2
+} from 'lucide-react';
+
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { useToast } from './ui/use-toast';
 import { ExportSelectionByPapers } from '../../wailsjs/go/main/App';
@@ -32,6 +38,7 @@ import {
 import { Separator } from './ui/separator';
 
 const RecommendView: React.FC = () => {
+  const { t } = useTranslation();
   const {
     loading,
     recommendations,
@@ -76,8 +83,8 @@ const RecommendView: React.FC = () => {
       setLocalFilePath((file as any).path);
       setUseLocalFile(true);
       toast({
-        title: "文件已选择",
-        description: `已选择文件: ${file.name}`,
+        title: "File Selected",
+        description: `Selected: ${file.name}`,
       });
     }
   };
@@ -97,8 +104,8 @@ const RecommendView: React.FC = () => {
   const handleExport = async () => {
     if (selectedPapers.size === 0) {
       toast({
-        title: "请选择论文",
-        description: "请至少选择一篇论文进行导出",
+        title: t('common.error'),
+        description: "Please select at least one paper.",
         variant: "destructive",
       });
       return;
@@ -106,8 +113,8 @@ const RecommendView: React.FC = () => {
 
     if ((exportFormat === 'csv' || exportFormat === 'json') && !exportOutput.trim()) {
       toast({
-        title: "请输入输出路径",
-        description: "CSV/JSON 格式需要指定输出文件路径",
+        title: t('common.error'),
+        description: "Please specify output path.",
         variant: "destructive",
       });
       return;
@@ -115,8 +122,8 @@ const RecommendView: React.FC = () => {
 
     if (exportFormat === 'feishu' && !exportFeishuName.trim()) {
       toast({
-        title: "请输入飞书表格名称",
-        description: "飞书导出需要指定表格名称",
+        title: t('common.error'),
+        description: "Please specify Feishu table name.",
         variant: "destructive",
       });
       return;
@@ -145,10 +152,10 @@ const RecommendView: React.FC = () => {
       // 如果是飞书导出且有链接，显示可点击的链接
       if (exportFormat === 'feishu' && result) {
         toast({
-          title: "导出成功",
+          title: t('common.success'),
           description: (
             <div className="space-y-2">
-              <p>已导出到飞书</p>
+              <p>Exported to Feishu</p>
               <a
                 href={result}
                 target="_blank"
@@ -168,8 +175,8 @@ const RecommendView: React.FC = () => {
         });
       } else {
         toast({
-          title: "导出成功",
-          description: `已导出 ${selectedPapers.size} 篇论文${result ? `到 ${result}` : ''}`,
+          title: t('common.success'),
+          description: `Exported ${selectedPapers.size} papers${result ? ` to ${result}` : ''}`,
         });
       }
       
@@ -177,8 +184,8 @@ const RecommendView: React.FC = () => {
     } catch (error) {
       console.error('Export failed:', error);
       toast({
-        title: "导出失败",
-        description: error instanceof Error ? error.message : "导出过程中出现错误",
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : "Export failed",
         variant: "destructive",
       });
     }
@@ -188,20 +195,21 @@ const RecommendView: React.FC = () => {
     if (!dateStr) return 'Unknown';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('zh-CN');
+      return date.toLocaleDateString();
     } catch {
       return dateStr;
     }
   };
 
   const getSourceBadgeColor = (source: string) => {
+    // Anthropic-style badge colors
     const colors: Record<string, string> = {
-      arxiv: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-      openreview: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-      acl: 'bg-green-500/10 text-green-600 dark:text-green-400',
-      ssrn: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+      arxiv: 'bg-anthropic-blue/10 text-anthropic-blue hover:bg-anthropic-blue/20 border-anthropic-blue/20',
+      openreview: 'bg-anthropic-orange/10 text-anthropic-orange hover:bg-anthropic-orange/20 border-anthropic-orange/20',
+      acl: 'bg-anthropic-green/10 text-anthropic-green hover:bg-anthropic-green/20 border-anthropic-green/20',
+      ssrn: 'bg-anthropic-orange/10 text-anthropic-orange hover:bg-anthropic-orange/20 border-anthropic-orange/20',
     };
-    return colors[source] || 'bg-gray-500/10 text-gray-600 dark:text-gray-400';
+    return colors[source] || 'bg-anthropic-mid/10 text-anthropic-mid hover:bg-anthropic-mid/20 border-anthropic-mid/20';
   };
 
   const handleBackToSearch = () => {
@@ -212,40 +220,40 @@ const RecommendView: React.FC = () => {
   // 如果显示推荐结果，全屏显示
   if (showRecommendations && mergedPapers.length > 0) {
     return (
-      <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+      <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
         <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
           {/* 顶部栏：返回按钮和标题 */}
-          <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-6 flex-shrink-0">
+          <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-6 flex-shrink-0">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleBackToSearch}
-                className="gap-2"
+                className="gap-2 font-sans"
               >
-                <ArrowLeftLineIcon className="w-4 h-4" />
-                返回
+                <ArrowLeft className="w-4 h-4" />
+                {t('recommend.back')}
               </Button>
               <div className="flex items-center gap-3 flex-1">
                
                 <div>
-                  <CardTitle className="text-3xl font-display font-semibold ">
-                    今日推荐 ({mergedPapers.length} 篇)
+                  <CardTitle className="text-3xl font-sans font-medium tracking-tight">
+                    {t('recommend.title')} <span className="text-muted-foreground font-normal ml-2 text-xl">({mergedPapers.length})</span>
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    基于您的兴趣从今天发布的arXiv论文中智能筛选
+                  <p className="text-sm text-muted-foreground mt-1 font-serif">
+                    {t('recommend.subtitle')}
                   </p>
                 </div>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col overflow-hidden p-8">
+          <CardContent className="flex-1 flex flex-col overflow-hidden p-8 bg-background">
             {/* 操作栏 */}
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/30 flex-shrink-0">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/30 flex-shrink-0">
               <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  已选择 {selectedPapers.size} 篇论文
+                <span className="text-sm text-muted-foreground font-sans">
+                  {t('recommend.selected')}: {selectedPapers.size}
                 </span>
                 {selectedPapers.size > 0 && (
                   <>
@@ -253,15 +261,17 @@ const RecommendView: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={selectAllPapers}
+                      className="font-sans"
                     >
-                      全选
+                      {t('recommend.selectAll')}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={clearSelection}
+                      className="font-sans"
                     >
-                      清空选择
+                      {t('recommend.clearSelection')}
                     </Button>
                   </>
                 )}
@@ -269,108 +279,113 @@ const RecommendView: React.FC = () => {
               {selectedPapers.size > 0 && (
                 <Button
                   onClick={() => setExportOpen(true)}
-                  className="gap-2"
+                  className="gap-2 font-sans bg-anthropic-dark text-anthropic-light hover:bg-anthropic-dark/90"
                 >
-                  <DownloadLineIcon className="w-4 h-4" />
-                  导出选中 ({selectedPapers.size})
+                  <Download className="w-4 h-4" />
+                  {t('recommend.exportSelection')} ({selectedPapers.size})
                 </Button>
               )}
             </div>
 
             {/* 推荐列表 - 直接显示所有推荐论文 */}
-            <div className="flex-1 overflow-y-auto space-y-3" data-recommendations-list>
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2" data-recommendations-list>
               {recommendations.map((group, groupIdx) => (
-                <div key={groupIdx} className="space-y-2">
+                <div key={groupIdx} className="space-y-4">
                   {/* 推荐论文列表 */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {group.papers.map((paper, paperIdx) => {
                       const paperId = paper.id || `${paper.source}-${paper.sourceId}`;
+                      const isSelected = selectedPapers.has(paperId);
                       return (
                         <div
                           key={paperId}
-                          className={`p-3 rounded-lg border transition-all ${
-                            selectedPapers.has(paperId)
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border/50 hover:border-border hover:bg-secondary/30'
+                          className={`p-6 rounded-xl border transition-all duration-200 group ${
+                            isSelected
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'border-border/40 hover:border-primary/30 hover:shadow-md bg-card'
                           }`}
                           style={{ userSelect: 'text' }}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-4">
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
                                 togglePaperSelection(paperId);
                               }}
-                              className="cursor-pointer"
+                              className="cursor-pointer pt-1"
                               style={{ userSelect: 'none' }}
                             >
                               <Checkbox
-                                checked={selectedPapers.has(paperId)}
+                                checked={isSelected}
                                 onCheckedChange={() => togglePaperSelection(paperId)}
-                                className="mt-1"
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </div>
                             <div className="flex-1 min-w-0 select-text" style={{ userSelect: 'text' }}>
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <h5 className="font-medium text-sm leading-snug line-clamp-2 flex-1">
+                              <div className="flex items-start justify-between gap-4 mb-3">
+                                <h5 className="font-medium text-lg font-sans leading-tight text-foreground flex-1">
                                   {paper.title}
                                 </h5>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Badge className={getSourceBadgeColor(paper.source)}>
+                                  <Badge variant="outline" className={`${getSourceBadgeColor(paper.source)} border font-normal font-sans tracking-wide`}>
                                     {paper.source.toUpperCase()}
                                   </Badge>
                                   {paper.similarity > 0 && (
-                                    <Badge variant="outline" className="text-xs">
-
-                                      {(paper.similarity * 100).toFixed(0)}%
+                                    <Badge variant="secondary" className="text-xs font-mono">
+                                      {(paper.similarity * 100).toFixed(0)}% {t('recommend.match')}
                                     </Badge>
                                   )}
                                 </div>
                               </div>
-                              <div className="text-xs text-muted-foreground mb-2 flex items-center gap-4">
-                                <span className="flex items-center gap-1">
-                                  <BookOpenLineIcon className="w-3 h-3" />
-                                  {paper.authors.slice(0, 3).join(', ')}
-                                  {paper.authors.length > 3 && ' et al.'}
+                              
+                              <div className="text-sm text-muted-foreground mb-3 flex flex-wrap items-center gap-x-6 gap-y-2 font-sans">
+                                <span className="flex items-center gap-1.5">
+                                  <BookOpen className="w-4 h-4 opacity-70" />
+                                  <span className="font-medium text-foreground/80">
+                                    {paper.authors.slice(0, 3).join(', ')}
+                                    {paper.authors.length > 3 && ' et al.'}
+                                  </span>
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <CalendarLineIcon className="w-3 h-3" />
+                                <span className="flex items-center gap-1.5">
+                                  <Calendar className="w-4 h-4 opacity-70" />
                                   {formatDate(paper.published || '')}
                                 </span>
                               </div>
-                              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                              
+                              <p className="text-base text-foreground/80 leading-relaxed font-serif line-clamp-3 mb-4 max-w-4xl">
                                 {paper.abstract}
                               </p>
-                              <div className="flex items-center gap-2">
+                              
+                              <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 {paper.url && (
                                   <>
                                     <Button
-                                      variant="ghost"
+                                      variant="secondary"
                                       size="sm"
-                                      className="h-7 text-xs"
+                                      className="h-8 text-xs font-sans"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         BrowserOpenURL(paper.url!);
                                       }}
                                     >
-                                      <ExternalLinkLineIcon className="w-3 h-3 mr-1" />
-                                      查看原文
+                                      <ExternalLink className="w-3 h-3 mr-1.5" />
+                                      {t('recommend.readPaper')}
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 text-xs"
+                                      className="h-8 text-xs font-sans hover:bg-secondary"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         navigator.clipboard.writeText(paper.url!);
                                         toast({
-                                          title: "已复制",
-                                          description: "链接已复制到剪贴板",
+                                          title: t('common.copied'),
+                                          description: "Link copied to clipboard",
                                         });
                                       }}
                                     >
-                                      <FileCopyLineIcon className="w-3 h-3 mr-1" />
-                                      复制链接
+                                      <Copy className="w-3 h-3 mr-1.5" />
+                                      {t('recommend.copyLink')}
                                     </Button>
                                   </>
                                 )}
@@ -389,68 +404,68 @@ const RecommendView: React.FC = () => {
 
         {/* 导出对话框 (复用) */}
         <AlertDialog open={exportOpen} onOpenChange={setExportOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="font-sans">
             <AlertDialogHeader>
-              <AlertDialogTitle>导出论文</AlertDialogTitle>
+              <AlertDialogTitle>{t('export.title')}</AlertDialogTitle>
               <AlertDialogDescription>
-                选择导出格式并填写相关信息
+                {t('export.description')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <Label>导出格式</Label>
+                <Label>{t('export.format')}</Label>
                 <Select
                   value={exportFormat}
                   onValueChange={(value) => setExportFormat(value as 'csv' | 'json' | 'zotero' | 'feishu')}
                 >
                   <SelectTrigger className="w-full mt-1">
-                    <SelectValue placeholder="选择导出格式" />
+                    <SelectValue placeholder="Select format" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="csv">CSV</SelectItem>
                     <SelectItem value="json">JSON</SelectItem>
                     <SelectItem value="zotero">Zotero</SelectItem>
-                    <SelectItem value="feishu">飞书多维表格</SelectItem>
+                    <SelectItem value="feishu">Feishu / Lark</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {(exportFormat === 'csv' || exportFormat === 'json') && (
                 <div>
-                  <Label>输出文件路径</Label>
+                  <Label>{t('export.outputPath')}</Label>
                   <Input
                     value={exportOutput}
                     onChange={(e) => setExportOutput(e.target.value)}
-                    placeholder="例如: papers.csv"
+                    placeholder="e.g., papers.csv"
                     className="mt-1"
                   />
                 </div>
               )}
               {exportFormat === 'zotero' && (
                 <div>
-                  <Label>Collection Key (可选)</Label>
+                  <Label>{t('export.collectionKey')}</Label>
                   <Input
                     value={exportCollection}
                     onChange={(e) => setExportCollection(e.target.value)}
-                    placeholder="留空则添加到默认位置"
+                    placeholder="Leave empty for default"
                     className="mt-1"
                   />
                 </div>
               )}
               {exportFormat === 'feishu' && (
                 <div>
-                  <Label>表格名称</Label>
+                  <Label>{t('export.feishuName')}</Label>
                   <Input
                     value={exportFeishuName}
                     onChange={(e) => setExportFeishuName(e.target.value)}
-                    placeholder="例如: 推荐论文"
+                    placeholder="e.g., Recommended Papers"
                     className="mt-1"
                   />
                 </div>
               )}
             </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>取消</AlertDialogCancel>
-              <AlertDialogAction onClick={handleExport}>导出</AlertDialogAction>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleExport}>{t('common.confirm')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -460,74 +475,71 @@ const RecommendView: React.FC = () => {
 
   // 默认显示搜索界面
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-full overflow-hidden animate-fade-in bg-background">
       <Card className="flex-1 flex flex-col border-0 rounded-none shadow-none bg-transparent overflow-hidden">
-        <CardHeader className="border-b border-border/30 bg-card/30 backdrop-blur-sm px-8 py-8 flex-shrink-0">
-          <div className="space-y-2">
+        <CardHeader className="border-b border-border/30 bg-background/50 backdrop-blur-sm px-8 py-8 flex-shrink-0">
+          <div className="space-y-2 max-w-3xl">
             <div className="flex items-center gap-3">
-              
-              <CardTitle className="text-3xl font-display font-semibold">Daily Recommendations</CardTitle>
+              <CardTitle className="text-4xl font-sans font-medium tracking-tight text-foreground">
+                {t('recommend.title')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-muted-foreground">
-              专注于今日 arXiv 论文推荐：基于您的兴趣描述或 Zotero 库，从今天发布的 arXiv 论文中智能筛选并推荐最相关的内容。
+            <CardDescription className="text-lg text-muted-foreground font-serif leading-relaxed">
+              {t('recommend.subtitle')}
             </CardDescription>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col overflow-hidden p-8">
+        <CardContent className="flex-1 flex flex-col overflow-hidden p-8 bg-background">
           {/* 搜索区域 */}
-          <div className="space-y-4 mb-6">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="interest-query" className="text-sm font-medium mb-2 block">
-                  研究兴趣描述（推荐填写，用于精准匹配今日arXiv论文）
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="interest-query"
-                    placeholder="详细描述您的研究兴趣，例如：Multi-agent reinforcement learning for improving LLM reasoning capabilities through collaborative debate..."
-                    value={interestQuery}
-                    onChange={(e) => setInterestQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !loading && handleRecommend()}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleRecommend}
-                    disabled={loading}
-                    className="px-6"
-                  >
-                    {loading ? (
-                      <>
-                        <RefreshLineIcon className="w-4 h-4 mr-2 animate-spin" />
-                        分析今日arXiv...
-                      </>
-                    ) : (
-                      <>
-                        <SearchLineIcon className="w-4 h-4 mr-2" />
-                        智能推荐
-                      </>
-                    )}
-                  </Button>
-                </div>
+          <div className="space-y-8 max-w-4xl">
+            
+            <div className="space-y-4">
+              <Label htmlFor="interest-query" className="text-base font-medium font-sans flex items-center gap-2">
+                <Search className="w-4 h-4 text-primary" />
+                {t('recommend.interests')}
+              </Label>
+              <div className="flex gap-3">
+                <Input
+                  id="interest-query"
+                  placeholder={t('recommend.placeholder')}
+                  value={interestQuery}
+                  onChange={(e) => setInterestQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !loading && handleRecommend()}
+                  className="flex-1 h-12 text-lg font-serif px-4 shadow-sm border-border/60 focus:border-primary/50 focus:ring-primary/20"
+                />
+                <Button
+                  onClick={handleRecommend}
+                  disabled={loading}
+                  className="h-12 px-8 font-sans text-base bg-anthropic-dark text-anthropic-light hover:bg-anthropic-dark/90 shadow-sm transition-all hover:scale-[1.02]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      {t('recommend.analyzing')}
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5 mr-2" />
+                      {t('recommend.recommendBtn')}
+                    </>
+                  )}
+                </Button>
               </div>
+              <p className="text-sm text-muted-foreground font-sans pl-1">
+                Tip: More specific descriptions yield better matches.
+              </p>
             </div>
 
+            <Separator className="bg-border/40" />
+
             {/* 本地文件导入选项 */}
-            <div className="border border-border/30 rounded-lg p-4 bg-card/30">
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">或使用本地论文文件</Label>
-                {useLocalFile && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearLocalFile}
-                    className="text-xs"
-                  >
-                    清除文件
-                  </Button>
-                )}
-              </div>
-              <div className="flex gap-2">
+            <div className="space-y-4">
+              <Label className="text-base font-medium font-sans flex items-center gap-2">
+                <FileJson className="w-4 h-4 text-primary" />
+                {t('recommend.localFile')}
+              </Label>
+              <div className="flex gap-3 items-center p-4 rounded-xl border border-border/40 bg-card/30 hover:bg-card/50 transition-colors">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -538,72 +550,61 @@ const RecommendView: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={openFileDialog}
-                  className="flex-1"
+                  className="font-sans border-dashed border-border hover:border-primary/50 hover:bg-secondary/50"
                 >
-                  选择本地文件 (JSON)
+                  {t('recommend.selectJson')}
                 </Button>
-                {localFilePath && (
-                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded text-sm">
+                {localFilePath ? (
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-md text-sm font-mono text-muted-foreground">
                     <span className="truncate">{localFilePath}</span>
                   </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground font-sans flex-1">
+                    {t('recommend.uploadTip')}
+                  </span>
+                )}
+                {useLocalFile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearLocalFile}
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    {t('recommend.clear')}
+                  </Button>
                 )}
               </div>
-              {useLocalFile && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  支持格式：JSON文件需包含title/abstract字段
-                </p>
-              )}
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="date-from" className="text-sm font-medium mb-2 block">
-                  推荐日期（默认今天，专注于当日arXiv论文）
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="date-from" className="text-sm font-medium font-sans flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  {t('recommend.date')}
                 </Label>
                 <Input
                   id="date-from"
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="flex-1"
+                  className="font-sans"
                 />
               </div>
-              <div className="flex-1">
-                <Label htmlFor="date-to" className="text-sm font-medium mb-2 block">
-                  结束日期（可选，通常与开始日期相同）
-                </Label>
-                <Input
-                  id="date-to"
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="flex-1"
-                />
-              </div>
+              {/* Optional End Date can be hidden or kept if needed, keeping simple for now */}
             </div>
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <span>专注arXiv（因为这个更新最快，产💩最多）：系统只爬取和分析今日arXiv新发布论文，周末和节假日自动跳过（arXiv不发刊）</span>
-                <Separator orientation="vertical" className="bg-border/50" />
-               {loading && (
-                 <span className="text-primary animate-pulse font-medium">
-                    正在分析今日arXiv论文，可前往 Logs 页面查看详细进度
-                 </span>
-               )}
+
+            <div className="flex items-start gap-3 p-4 bg-anthropic-mid/5 rounded-lg border border-anthropic-mid/10">
+              <RefreshCcw className="w-4 h-4 text-muted-foreground mt-0.5" />
+              <div className="text-sm text-muted-foreground font-sans leading-relaxed">
+                <strong className="font-medium text-foreground">{t('recommend.noteTitle')}:</strong> {t('recommend.noteContent')}
+              </div>
             </div>
           </div>
 
           {/* 空状态 / 引导 */}
           {mergedPapers.length === 0 && !loading && (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4">
-              
-                <div>
-                  <h3 className="text-lg font-medium mb-1">获取今日推荐</h3>
-                  <p className="text-sm text-muted-foreground">
-                    描述您的研究兴趣，AI将从今天发布的arXiv论文中为您推荐您可能最感兴趣的内容
-                  </p>
-                </div>
-              </div>
+            <div className="flex-1 flex items-center justify-center opacity-30 pointer-events-none select-none">
+              {/* Optional background illustration or watermark */}
             </div>
           )}
         </CardContent>

@@ -404,16 +404,8 @@ func (cs *CrawlService) loadPersistedTask(taskID string) (*PersistedTask, error)
 	return &t, nil
 }
 
-// loadTaskRefsFromDisk 读取任务插入记录引用
-func (cs *CrawlService) loadTaskRefsFromDisk(taskID string) ([]PaperRef, error) {
-	t, err := cs.loadPersistedTask(taskID)
-	if err != nil {
-		return nil, err
-	}
-	return t.Inserted, nil
-}
 
-// addLog 添加日志
+
 func (cs *CrawlService) addLog(task *CrawlTask, level, message, platform string, count ...int) {
 	logEntry := LogEntry{
 		ID:        fmt.Sprintf("log_%d", time.Now().UnixNano()),
