@@ -26,7 +26,7 @@
 
 <div align="center">
 
-### 需要注意的是， 现在的 0.0.1 版可能充满了 bug。
+### 需要注意的是， 现在的 0.0.3 版可能还存在 bug。
 
 </div>
 
@@ -37,7 +37,7 @@
 >
 > TODO: Download 部分，去设计一个下载对应的 pdf 然后对对应目录下的所有 pdf 做 deep reaserch 的页面
 >
-> TODO：考虑接入 firecrawl 从而增加更多平台适配性
+> TODO：考虑接入 firecrawl 从而增加更多平台适配性，增加信息的来源
 
 ## 简介
 
@@ -162,7 +162,7 @@ type Platform interface {
 
 感谢所有开源库的作者们！
 
-## 📄 许可证
+## 许可证
 
 本项目采用 [ AGPL-3.0 license ](LICENSE) 许可证。
 
