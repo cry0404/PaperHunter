@@ -10,7 +10,7 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 )
 
-// ExportInput 导出工具的输入参数
+
 type ExportInput struct {
 	// Format 导出格式：csv, json, zotero, feishu
 	Format string `json:"format" jsonschema:"required,enum=csv,enum=json,enum=zotero,enum=feishu,description=Export format (csv, json, zotero, feishu)"`
@@ -47,7 +47,6 @@ type ExportOutput struct {
 	URL     string `json:"url,omitempty" jsonschema:"description=Export URL (for feishu format)"`
 }
 
-// NewExportTool 创建导出工具，接受 App 实例
 func NewExportTool(app *App) tool.InvokableTool {
 	exportTool, err := utils.InferTool("export", "Export papers to different formats (csv, json, zotero, feishu) with optional filtering", func(ctx context.Context, input *ExportInput) (output *ExportOutput, err error) {
 		if app == nil || app.coreApp == nil {

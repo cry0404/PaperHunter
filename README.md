@@ -1,14 +1,14 @@
 <div align="center">
 
 # PaperHunter
-
+[![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
 </div>
 
 **多平台学术论文爬取与语义搜索工具**
 
 ![主页面](./img/paperhunter.png)
 
-[![License](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
+
 
 <div align="center">
 
@@ -39,11 +39,11 @@
 >
 > TODO：考虑接入 firecrawl 从而增加更多平台适配性
 
-## 📖 简介
+## 简介
 
 PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜索工具。基于我之前的小项目 QuickArxiv 的实践演进而来，支持从多个学术平台按关键词、类别、时间范围抓取论文，利用 Embedding 技术进行语义相似度检索，并支持多种格式导出。
 
-### ✨ 核心特性
+### 核心特性
 
 -  **多平台支持**：目前支持 arXiv、OpenReview，后续将扩展 ACL Anthology、DBLP、Semantic Scholar 等平台
 -  **灵活查询**：支持关键词、类别、日期范围等多维度过滤
@@ -58,6 +58,12 @@ PaperHunter 是一个高效、灵活的多平台学术论文爬取与语义搜�
 ### 安装
 
 从 [Releases](https://github.com/cry0404/PaperHunter/releases) 页面下载对应平台的安装包（macOS/Windows）。
+
+> macOS 下载安装后如提示“已损坏，无法打开”，请先移除隔离属性再运行：
+> ```bash
+> sudo xattr -r -d com.apple.quarantine /Applications/PaperHunter.app
+> ```
+> 如果你放在其他位置，请替换为实际路径。
 
 ### 配置
 
@@ -136,7 +142,7 @@ type Platform interface {
 5. 更新配置文件添加平台配置
 
 
-## 🤝 贡献
+## 贡献
 
 欢迎贡献代码、报告问题或提出新功能建议！
 
@@ -146,7 +152,7 @@ type Platform interface {
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
 
-## 📝 致谢
+## 致谢
 
 本项目参考和借鉴了以下优秀开源项目：
 
@@ -160,7 +166,7 @@ type Platform interface {
 
 本项目采用 [ AGPL-3.0 license ](LICENSE) 许可证。
 
-## 📧 联系方式
+## 联系方式
 
 - Issue: [GitHub Issues](https://github.com/cry0404/PaperHunter/issues)
 - Email: cry@sadcoder.me

@@ -11,7 +11,6 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 )
 
-// CrawlerInput 爬虫工具的输入参数
 type CrawlerInput struct {
 	// Platform 平台名称，如 "arxiv", "openreview", "acl" 等
 	Platform string `json:"platform" jsonschema:"required,description=The platform to crawl from (e.g., arxiv, openreview, acl)"`
@@ -43,14 +42,13 @@ type CrawlerOutput struct {
 	Message string `json:"message" jsonschema:"description=Result message"`
 }
 
-// NewCrawlerTool 创建爬虫工具，接受 App 实例
+
 func NewCrawlerTool(app *App) tool.InvokableTool {
 	crawlerTool, err := utils.InferTool("crawler", "Crawl academic papers from various platforms (arxiv, openreview, acl, etc.) based on keywords, categories, and date range", func(ctx context.Context, input *CrawlerInput) (output *CrawlerOutput, err error) {
 		if app == nil || app.coreApp == nil {
 			return nil, fmt.Errorf("app instance is not initialized")
 		}
 
-		// 构建 platform.Query
 		query := platform.Query{
 			Keywords:   input.Keywords,
 			Categories: input.Categories,

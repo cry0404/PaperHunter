@@ -15,13 +15,13 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 )
 
-// SearchExample 示例论文（用于语义搜索）
+
 type SearchExample struct {
 	Title    string `json:"title" jsonschema:"description=Title of the example paper"`
 	Abstract string `json:"abstract" jsonschema:"description=Abstract of the example paper"`
 }
 
-// SearchInput 搜索工具的输入参数
+
 type SearchInput struct {
 	// Query 查询文本（用于语义搜索或关键词搜索）
 	// 注意：query 和 examples 至少需要提供一个
@@ -63,7 +63,7 @@ type SearchOutput struct {
 	Message string                 `json:"message" jsonschema:"description=Result message"`
 }
 
-// NewSearchTool 创建搜索工具，接受 App 实例
+
 func NewSearchTool(app *App) tool.InvokableTool {
 	searchTool, err := utils.InferTool("search", `Search papers in the local database using semantic search or keyword search.
 

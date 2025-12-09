@@ -27,10 +27,8 @@ type ZoteroRecommendInput struct {
 	// Action 操作类型：get_collections（获取集合列表）、get_papers（获取论文）、daily_recommend（arXiv每日推荐）
 	Action string `json:"action" jsonschema:"required,enum=get_collections,enum=get_papers,enum=daily_recommend,description=Action to perform: get_collections, get_papers, or arXiv daily_recommend"`
 
-
 	CollectionKey string `json:"collection_key,omitempty" jsonschema:"description=Collection key for get_papers or daily_recommend action"`
 	Limit         int    `json:"limit,omitempty" jsonschema:"description=Limit number of papers to return (for get_papers)"`
-
 
 	TopK               int    `json:"top_k,omitempty" jsonschema:"description=Number of recommended papers (default: 10)"`
 	MaxRecommendations int    `json:"max_recommendations,omitempty" jsonschema:"description=Maximum total number of papers to recommend (default: 30)"`
@@ -45,10 +43,8 @@ type ZoteroRecommendInput struct {
 	LocalFileAction string `json:"local_file_action,omitempty" jsonschema:"description=Action: 'import_for_recommend'"`
 }
 
-
 type ZoteroRecommendOutput struct {
 	Success bool `json:"success" jsonschema:"description=Whether the operation was successful"`
-
 
 	Message string `json:"message,omitempty" jsonschema:"description=Result message"`
 	Data    any    `json:"data,omitempty" jsonschema:"description=Result data (collections or papers for get_collections/get_papers)"`
@@ -60,12 +56,10 @@ type ZoteroRecommendOutput struct {
 	Recommendations []RecommendationGroup `json:"recommendations,omitempty" jsonschema:"description=Grouped recommendations based on seed papers or interests (for daily_recommend)"`
 }
 
-
 type RecommendationGroup struct {
 	SeedPaper models.Paper           `json:"seed_paper" jsonschema:"description=The seed paper or interest this group is based on (Zotero paper or user interest)"`
 	Papers    []*models.SimilarPaper `json:"papers" jsonschema:"description=Recommended arXiv papers similar to the seed paper or interest"`
 }
-
 
 func getTodayCrawlStatusFile() string {
 	homeDir, _ := os.UserHomeDir()
@@ -75,13 +69,11 @@ func getTodayCrawlStatusFile() string {
 	return filepath.Join(statusDir, fmt.Sprintf("crawl_%s.txt", today))
 }
 
-
 func checkTodayCrawled() bool {
 	statusFile := getTodayCrawlStatusFile()
 	_, err := os.Stat(statusFile)
 	return err == nil
 }
-
 
 func markTodayCrawled() error {
 	statusFile := getTodayCrawlStatusFile()
@@ -89,7 +81,6 @@ func markTodayCrawled() error {
 }
 
 
-// crawlTodayNewSubmissions 爬取今日 arXiv New Submissions 页面的论文
 // 使用 https://arxiv.org/list/cs/new 获取今日公布的 CS 领域论文
 func crawlTodayNewSubmissions(ctx context.Context, app *App, category string) (int, error) {
 	if app == nil || app.coreApp == nil {
@@ -99,8 +90,6 @@ func crawlTodayNewSubmissions(ctx context.Context, app *App, category string) (i
 	if category == "" {
 		category = "cs" // 默认 CS 全部
 	}
-
-	// 检查是否为周末（arXiv 在周末通常不发刊）
 
 
 	logger.Info("使用 New Submissions 页面获取今日 arXiv %s 论文", category)
@@ -116,7 +105,7 @@ func crawlTodayNewSubmissions(ctx context.Context, app *App, category string) (i
 		return 0, fmt.Errorf("类型转换失败: 不是 arxiv.Adapter")
 	}
 
-	// 获取今日新论文
+
 	result, err := arxivAdapter.FetchNewSubmissions(ctx, category)
 	if err != nil {
 		return 0, fmt.Errorf("获取今日新论文失败: %w", err)
@@ -129,7 +118,7 @@ func crawlTodayNewSubmissions(ctx context.Context, app *App, category string) (i
 
 	logger.Info("获取到 %d 篇今日新论文，开始保存到数据库", len(result.Papers))
 
-	// 保存到数据库
+
 	count, err := app.coreApp.SavePapers(ctx, result.Papers)
 	if err != nil {
 		logger.Warn("保存论文时出错: %v", err)
@@ -139,7 +128,7 @@ func crawlTodayNewSubmissions(ctx context.Context, app *App, category string) (i
 	return count, nil
 }
 
-// getZoteroPapers 从 Zotero 获取论文
+
 func getZoteroPapers(collectionKey string, limit int) ([]*models.Paper, error) {
 	cfg := config.Get()
 	if cfg.Zotero.UserID == "" || cfg.Zotero.APIKey == "" {
@@ -155,7 +144,7 @@ func getZoteroPapers(collectionKey string, limit int) ([]*models.Paper, error) {
 	return papers, nil
 }
 
-// searchSimilarPapers 基于种子论文搜索相似论文，支持日期过滤
+
 func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper, topK int, fromDate, toDate *time.Time) ([]*models.SimilarPaper, error) {
 	if app == nil || app.coreApp == nil {
 		return nil, fmt.Errorf("app not initialized")
@@ -182,7 +171,7 @@ func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper,
 		return nil, fmt.Errorf("搜索失败: %w", err)
 	}
 
-	// 过滤低相似度结果（降低阈值以获得更多结果）
+
 	const minSimilarity = 0.2 // 降低阈值
 	filtered := make([]*models.SimilarPaper, 0, len(results))
 	for _, sp := range results {
@@ -191,7 +180,6 @@ func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper,
 		}
 	}
 
-	// 限制返回数量
 	if len(filtered) > topK {
 		filtered = filtered[:topK]
 	}
@@ -204,7 +192,6 @@ func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper,
 	return filtered, nil
 }
 
-// NewZoteroRecommendTool 创建统一的 Zotero 和推荐工具，接受 App 实例
 func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 	tool, err := utils.InferTool("zotero_recommend",
 		"Simple arXiv recommendations with JSON file import. Actions: get_collections (Zotero), get_papers (Zotero papers), daily_recommend (arXiv CS recommendations). For daily_recommend: either (1) describe research interests in example_title/abstract to get today's arXiv CS paper recommendations, or (2) provide local_file_path to JSON file for import-based recommendations. Set local_file_action to 'import_for_recommend' to use the file as recommendation seed. JSON file format: {\"title\": \"...\", \"abstract\": \"...\"}.",
@@ -347,7 +334,6 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 					})
 				}
 
-
 				if input.LocalFilePath != "" && input.LocalFileAction == "import_for_recommend" {
 					logger.Info("导入本地JSON文件: %s", input.LocalFilePath)
 					localPaper, err := importJSONFile(input.LocalFilePath)
@@ -394,7 +380,6 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 				fromDate = time.Date(fromDate.Year(), fromDate.Month(), fromDate.Day(), 0, 0, 0, 0, fromDate.Location())
 				toDate = time.Date(toDate.Year(), toDate.Month(), toDate.Day(), 23, 59, 59, 999999999, toDate.Location())
 
-
 				allRecommendedPapers := make(map[string]*models.SimilarPaper)
 
 				for _, seedPaper := range seeds {
@@ -439,7 +424,6 @@ func NewZoteroRecommendTool(app *App) tool.InvokableTool {
 						break
 					}
 				}
-
 
 				if len(allRecommendedPapers) > maxRecommendations {
 					// 这里简化处理，只保留前几个组的推荐

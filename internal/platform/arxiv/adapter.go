@@ -41,9 +41,7 @@ func (a *Adapter) Name() string { return "arxiv" }
 
 func (a *Adapter) GetConfig() platform.Config { return a.config }
 
-// FetchNewSubmissions 获取今日新提交的论文（通过 New Submissions 页面）
-// category 参数指定分类，如 "cs" 表示计算机科学全部，"cs.AI" 表示人工智能
-// 如果为空，默认使用 "cs"
+
 func (a *Adapter) FetchNewSubmissions(ctx context.Context, category string) (platform.Result, error) {
 	if category == "" {
 		category = "cs" // 默认 CS 全部
