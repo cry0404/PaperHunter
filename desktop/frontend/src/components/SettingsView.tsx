@@ -19,6 +19,7 @@ import {
   BookMarked,
   Share2
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { GetConfig, UpdateConfig } from '../../wailsjs/go/main/App';
 import * as models from '../../wailsjs/go/models';
 import { useToast } from './ui/use-toast';
@@ -176,11 +177,11 @@ const SettingsView: React.FC = () => {
               <div className="p-6 rounded-xl border border-border/40 bg-card/30 space-y-6">
                 
                 {/* Theme Mode */}
-                <div>
+              <div>
                   <label className="text-sm font-medium block mb-4 font-sans">{t('settings.appearance.theme')}</label>
-                  <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     {(['light', 'dark', 'system'] as const).map((mode) => (
-                      <Button
+                  <Button
                         key={mode}
                         variant={theme === mode ? 'default' : 'outline'}
                         className={`justify-start h-auto py-3 px-4 font-sans ${
@@ -191,14 +192,14 @@ const SettingsView: React.FC = () => {
                         {mode === 'light' && <Sun className="w-4 h-4 mr-2" />}
                         {mode === 'dark' && <Moon className="w-4 h-4 mr-2" />}
                         {mode === 'system' && <Monitor className="w-4 h-4 mr-2" />}
-                        <div className="flex flex-col items-start">
+                    <div className="flex flex-col items-start">
                           <span className="font-medium capitalize">
                             {mode === 'light' ? t('settings.appearance.light') : 
                              mode === 'dark' ? t('settings.appearance.dark') : 
                              t('settings.appearance.system')}
                           </span>
-                        </div>
-                      </Button>
+                    </div>
+                  </Button>
                     ))}
                   </div>
                 </div>
@@ -209,7 +210,7 @@ const SettingsView: React.FC = () => {
                 <div>
                   <label className="text-sm font-medium block mb-4 font-sans">{t('settings.appearance.language')}</label>
                   <div className="grid grid-cols-2 gap-4">
-                    <Button
+                  <Button
                       variant={i18n.language === 'en' ? 'default' : 'outline'}
                       className={`justify-start h-auto py-3 px-4 font-sans ${
                         i18n.language === 'en' ? 'ring-2 ring-primary ring-offset-2' : ''
@@ -217,11 +218,11 @@ const SettingsView: React.FC = () => {
                       onClick={() => i18n.changeLanguage('en')}
                     >
                       <Languages className="w-4 h-4 mr-2" />
-                      <div className="flex flex-col items-start">
+                    <div className="flex flex-col items-start">
                         <span className="font-medium">English</span>
-                      </div>
-                    </Button>
-                    <Button
+                    </div>
+                  </Button>
+                  <Button
                       variant={i18n.language === 'zh' ? 'default' : 'outline'}
                       className={`justify-start h-auto py-3 px-4 font-sans ${
                         i18n.language === 'zh' ? 'ring-2 ring-primary ring-offset-2' : ''
@@ -229,10 +230,10 @@ const SettingsView: React.FC = () => {
                       onClick={() => i18n.changeLanguage('zh')}
                     >
                       <Globe className="w-4 h-4 mr-2" />
-                      <div className="flex flex-col items-start">
+                    <div className="flex flex-col items-start">
                         <span className="font-medium">中文</span>
-                      </div>
-                    </Button>
+                    </div>
+                  </Button>
                   </div>
                 </div>
 
@@ -282,8 +283,8 @@ const SettingsView: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="w-full">
                     <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.modelName')}</label>
                     <input
                       type="text"
@@ -299,7 +300,7 @@ const SettingsView: React.FC = () => {
                     />
                   </div>
 
-                  <div>
+                  <div className="w-full">
                     <label className="text-sm font-medium block mb-2 font-sans">{t('settings.embedding.dimension')}</label>
                     <input
                       type="number"
@@ -450,24 +451,28 @@ const SettingsView: React.FC = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium block mb-2 font-sans">{t('settings.zotero.libraryType')}</label>
-                    <select
+                    <Select
                       value={config.Zotero?.LibraryType || 'user'}
-                      onChange={(e) => setConfig(
+                      onValueChange={(value) => setConfig(
                         models.config.AppConfig.createFrom({
                           ...config,
                           Zotero: { 
                             ...config.Zotero, 
-                            LibraryType: e.target.value,
+                            LibraryType: value,
                             UserID: config.Zotero?.UserID || '',
                             APIKey: config.Zotero?.APIKey || ''
                           }
                         })
                       )}
-                      className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                     >
-                      <option value="user">{t('settings.zotero.user')}</option>
-                      <option value="group">{t('settings.zotero.group')}</option>
-                    </select>
+                      <SelectTrigger className="w-full h-[42px] px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono">
+                        <SelectValue placeholder={t('settings.zotero.user')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">{t('settings.zotero.user')}</SelectItem>
+                        <SelectItem value="group">{t('settings.zotero.group')}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -523,7 +528,7 @@ const SettingsView: React.FC = () => {
                     className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-sm font-mono"
                     placeholder="cli_..."
                   />
-                </div>
+          </div>
 
                 <div>
                   <label className="text-sm font-medium block mb-2 font-sans">{t('settings.feishu.appSecret')}</label>

@@ -8,7 +8,7 @@ import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 import { useToast } from './ui/use-toast';
-import { Eraser, Trash2, FileOutput, Calendar, Database, Filter, Loader2 } from 'lucide-react';
+import { Trash2, FileOutput, Filter, Loader2 } from 'lucide-react';
 import { CleanWithOptions } from '../../wailsjs/go/main/App';
 
 const CleanView: React.FC = () => {
@@ -167,7 +167,7 @@ const CleanView: React.FC = () => {
                       onChange={(e)=>setExportOutput(e.target.value)} 
                       placeholder="backup/clean_backup.csv" 
                       disabled={!exportBefore}
-                      className="bg-background border-border font-mono text-sm"
+                      className="bg-background border-border font-mono text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
                     />
                     <p className="text-xs text-muted-foreground font-sans">Saved relative to app directory</p>
                   </div>

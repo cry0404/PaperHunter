@@ -139,7 +139,7 @@ const LibraryView: React.FC = () => {
     const fetchPapers = useCallback(async () => {
         if (taskId) return; // 任务视图不走常规列表
         if (mode === 'semantic') {
-             handleSemanticSearch();
+             // handleSemanticSearch(); // Removed auto-search for semantic mode
              return;
         }
 

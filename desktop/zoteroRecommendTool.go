@@ -196,7 +196,11 @@ func searchSimilarPapers(ctx context.Context, app *App, seedPaper *models.Paper,
 		filtered = filtered[:topK]
 	}
 
-	logger.Info("搜索完成: 原始 %d 篇，过滤后 %d 篇 (阈值: %.2f)", len(results), len(filtered), minSimilarity)
+	titleSample := seedPaper.Title
+	if len(titleSample) > 30 {
+		titleSample = titleSample[:30] + "..."
+	}
+	logger.Info("基于种子 [%s] 搜索完成: 原始 %d 篇，过滤后 %d 篇 (阈值: %.2f)", titleSample, len(results), len(filtered), minSimilarity)
 	return filtered, nil
 }
 
