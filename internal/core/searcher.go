@@ -13,9 +13,9 @@ import (
 
 // Searcher 本地检索器，支持语义搜索、关键词搜索和IR搜索
 type Searcher struct {
-	db          storage.PaperStorage
-	embedder    emb.Service
-	irSearcher  *ir.IRSearcher  // IR搜索引擎
+	db         storage.PaperStorage
+	embedder   emb.Service
+	irSearcher *ir.IRSearcher // IR搜索引擎
 }
 
 func NewSearcher(db storage.PaperStorage, embedder emb.Service) *Searcher {
@@ -50,7 +50,7 @@ type SearchOptions struct {
 	// 是否使用语义搜索（需要配置 embedder）
 	Semantic bool
 	// IR搜索模式
-	IR bool // 是否使用IR搜索
+	IR          bool   // 是否使用IR搜索
 	IRAlgorithm string // IR算法类型: "tfidf", "bm25", "all"
 }
 
@@ -324,4 +324,13 @@ func (s *Searcher) SetBM25Parameters(k1, b float64) error {
 	s.irSearcher.SetBM25Parameters(k1, b)
 	logger.Info("BM25参数已更新: k1=%.2f, b=%.2f", k1, b)
 	return nil
+}
+
+// AddPaperToIR 添加论文到 IR 索引
+func (s *Searcher) AddPaperToIR(paper *models.Paper) {
+	if s.irSearcher != nil {
+		if err := s.irSearcher.AddDocument(paper); err != nil {
+			logger.Warn("添加论文到IR索引失败: %v", err)
+		}
+	}
 }

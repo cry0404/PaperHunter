@@ -75,7 +75,8 @@ interface PaperListResponse {
 
 const LibraryView: React.FC = () => {
     const { t } = useTranslation();
-    const [mode, setMode] = useState<'basic' | 'semantic'>('basic');
+    const [mode, setMode] = useState<'basic' | 'semantic' | 'ir'>('basic');
+    const [irAlgorithm, setIrAlgorithm] = useState<'bm25' | 'tfidf'>('bm25');
     const [papers, setPapers] = useState<Paper[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -138,8 +139,7 @@ const LibraryView: React.FC = () => {
 
     const fetchPapers = useCallback(async () => {
         if (taskId) return; // 任务视图不走常规列表
-        if (mode === 'semantic') {
-             // handleSemanticSearch(); // Removed auto-search for semantic mode
+        if (mode === 'semantic' || mode === 'ir') {
              return;
         }
 
@@ -198,10 +198,10 @@ const LibraryView: React.FC = () => {
         }
     }, []);
 
-    // 切换到语义检索模式
-    const handleSemanticSearch = async () => {
+    // 切换到高级检索模式（语义或IR）
+    const handleAdvancedSearch = async () => {
         if (!search.trim()) {
-             if (mode === 'semantic') {
+             if (mode === 'semantic' || mode === 'ir') {
                  return;
              }
         }
@@ -230,14 +230,16 @@ const LibraryView: React.FC = () => {
             const resp = await SearchWithOptions({
                 Query: search,
                 Examples: examples,
-                Semantic: semantic,
+                Semantic: mode === 'semantic',
                 TopK: topK,
                 Limit: 0,
                 Source: source === 'all' ? '' : source,
                 From: dateFrom,
                 Until: dateUntil,
                 ComputeEmbed: false, //默认存在 embedding 部分
-                EmbedBatch: 100
+                EmbedBatch: 100,
+                IR: mode === 'ir',
+                IRAlgorithm: irAlgorithm
             } as any);
 
             const data = JSON.parse(resp || '[]') as any[];
@@ -263,7 +265,7 @@ const LibraryView: React.FC = () => {
             setTotal(mapped.length); 
             setPage(1); 
             
-            toast({ title: t('library.semanticSearch'), description: t('library.toast.searchSuccess', { count: mapped.length }) });
+            toast({ title: mode === 'semantic' ? t('library.semanticSearch') : 'IR Search', description: t('library.toast.searchSuccess', { count: mapped.length }) });
 
         } catch (error) {
             console.error('Search failed:', error);
@@ -440,26 +442,38 @@ const LibraryView: React.FC = () => {
                          <div className="space-y-1">
                             <div className="flex items-center gap-3">
                                 <CardTitle className="text-3xl font-sans font-medium tracking-tight">{t('library.title')}</CardTitle>
-                                <Badge variant="outline" className="ml-2 font-sans">
-                                    {mode === 'semantic' ? t('library.semanticSearch') : t('library.standardView')}
-                                </Badge>
+                                <div className="flex gap-1 ml-2">
+                                    <Badge 
+                                        variant={mode === 'basic' ? "default" : "outline"} 
+                                        className="font-sans cursor-pointer hover:bg-primary/20"
+                                        onClick={() => setMode('basic')}
+                                    >
+                                        Standard
+                                    </Badge>
+                                    <Badge 
+                                        variant={mode === 'semantic' ? "default" : "outline"} 
+                                        className="font-sans cursor-pointer hover:bg-primary/20"
+                                        onClick={() => setMode('semantic')}
+                                    >
+                                        Semantic
+                                    </Badge>
+                                    <Badge 
+                                        variant={mode === 'ir' ? "default" : "outline"} 
+                                        className="font-sans cursor-pointer hover:bg-primary/20"
+                                        onClick={() => setMode('ir')}
+                                    >
+                                        Classic IR
+                                    </Badge>
+                                </div>
                             </div>
                             <CardDescription className="text-base text-muted-foreground font-serif">
                                 {taskId ? t('library.taskViewDesc') : t('library.defaultDesc')}
                             </CardDescription>
                          </div>
                          <div className="flex items-center gap-2">
-                            <Button 
-                                variant={mode === 'semantic' ? "secondary" : "ghost"}
-                                size="sm" 
-                                onClick={toggleMode}
-                                className="font-sans"
-                            >
-                                {mode === 'semantic' ? t('library.switchToStandard') : t('library.switchToSemantic')}
-                            </Button>
                             <Separator orientation="vertical" className="h-6 mx-1" />
                             <Button variant="outline" size="sm" onClick={() => {
-                                if (mode === 'semantic') handleSemanticSearch();
+                                if (mode !== 'basic') handleAdvancedSearch();
                                 else fetchPapers();
                             }} disabled={loading} className="font-sans">
                                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -480,11 +494,11 @@ const LibraryView: React.FC = () => {
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <Input 
-                                    placeholder={mode === 'semantic' ? t('library.searchPlaceholderSemantic') : t('library.searchPlaceholderStandard')}
+                                    placeholder={mode === 'basic' ? t('library.searchPlaceholderStandard') : (mode === 'semantic' ? t('library.searchPlaceholderSemantic') : "Search with keywords (TF-IDF/BM25)")}
                                     className="pl-9 bg-background/50 h-10"
                                     value={search}
                                     onChange={(e) => { setSearch(e.target.value); if (mode === 'basic') setPage(1); }}
-                                    onKeyDown={(e) => e.key === 'Enter' && mode === 'semantic' && handleSemanticSearch()}
+                                    onKeyDown={(e) => e.key === 'Enter' && mode !== 'basic' && handleAdvancedSearch()}
                                 />
                             </div>
                             
@@ -501,9 +515,9 @@ const LibraryView: React.FC = () => {
                                 </SelectContent>
                             </Select>
 
-                            {mode === 'semantic' && (
+                            {mode !== 'basic' && (
                                 <Button 
-                                    onClick={handleSemanticSearch} 
+                                    onClick={handleAdvancedSearch} 
                                     disabled={loading || !search.trim()}
                                     variant="default"
                                 >
@@ -530,6 +544,30 @@ const LibraryView: React.FC = () => {
                                             <Input type="date" className="h-8 text-xs" value={dateUntil} onChange={(e) => setDateUntil(e.target.value)} />
                                         </div>
                                     </div>
+                                    {mode === 'ir' && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel>IR Options</DropdownMenuLabel>
+                                            <div className="p-2 space-y-2">
+                                                <div className="grid gap-1.5">
+                                                    <Label className="text-xs">Algorithm</Label>
+                                                    <Select value={irAlgorithm} onValueChange={(v:any) => setIrAlgorithm(v)}>
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="bm25">BM25 (Best Matching)</SelectItem>
+                                                            <SelectItem value="tfidf">TF-IDF</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="grid gap-1.5">
+                                                    <Label className="text-xs">{t('library.topK')}: {topK}</Label>
+                                                    <Input type="number" className="h-8 text-xs" value={topK} onChange={(e) => setTopK(parseInt(e.target.value)||100)} />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                     {mode === 'semantic' && (
                                         <>
                                             <DropdownMenuSeparator />

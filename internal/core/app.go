@@ -131,6 +131,12 @@ func (a *App) CrawlWithProgress(ctx context.Context, platformName string, q plat
 			logger.Error("保存论文失败 [%s]: %v", p.URL, err)
 			return count, fmt.Errorf("保存论文失败(%s): %w", p.URL, err)
 		}
+		// 更新 ID 并添加到 IR 索引
+		p.ID = pid
+		if a.searcher != nil {
+			a.searcher.AddPaperToIR(p)
+		}
+
 		count++
 
 		if progress != nil {
@@ -423,6 +429,12 @@ func (a *App) SavePapers(ctx context.Context, papers []*models.Paper) (int, erro
 			logger.Error("保存论文失败 [%s]: %v", p.URL, err)
 			continue
 		}
+		// 更新 ID 并添加到 IR 索引
+		p.ID = pid
+		if a.searcher != nil {
+			a.searcher.AddPaperToIR(p)
+		}
+
 		count++
 
 		if a.embedder != nil {

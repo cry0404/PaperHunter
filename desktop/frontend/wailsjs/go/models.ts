@@ -351,6 +351,8 @@ export namespace main {
 	    until: string;
 	    computeEmbed: boolean;
 	    embedBatch: number;
+	    ir: boolean;
+	    irAlgorithm: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SearchOptions(source);
@@ -368,6 +370,8 @@ export namespace main {
 	        this.until = source["until"];
 	        this.computeEmbed = source["computeEmbed"];
 	        this.embedBatch = source["embedBatch"];
+	        this.ir = source["ir"];
+	        this.irAlgorithm = source["irAlgorithm"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

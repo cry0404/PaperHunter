@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: 实现一个通用的 downloader，可以对应不同平台的下载
+// 需要清楚，并且判断是合理的 url
 type Downloader struct {
 	
 
@@ -35,6 +36,7 @@ func DownloadPDF(platform string, urls []string) ([]string, error) { //这里应
 	if platform != "arxiv" {
 		return nil, fmt.Errorf("暂不支持除 arxiv 外的平台")
 	}
+	
 	switch platform {
 	case "arxiv":
 		pdfs, err = downloadArxivPDFs(urls)
