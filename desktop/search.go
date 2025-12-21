@@ -23,6 +23,8 @@ type SearchOptions struct {
 	Until        string          `json:"until"` // YYYY-MM-DD
 	ComputeEmbed bool            `json:"computeEmbed"`
 	EmbedBatch   int             `json:"embedBatch"`
+	IR           bool            `json:"ir"`
+	IRAlgorithm  string          `json:"irAlgorithm"`
 }
 
 // SearchWithOptions 执行搜索并返回 JSON 字符串结果
@@ -77,11 +79,13 @@ func (a *App) SearchWithOptions(opts SearchOptions) (string, error) {
 	}
 
 	sopts := core.SearchOptions{
-		Query:     opts.Query,
-		Examples:  examples,
-		Condition: cond,
-		TopK:      opts.TopK,
-		Semantic:  opts.Semantic,
+		Query:       opts.Query,
+		Examples:    examples,
+		Condition:   cond,
+		TopK:        opts.TopK,
+		Semantic:    opts.Semantic,
+		IR:          opts.IR,
+		IRAlgorithm: opts.IRAlgorithm,
 	}
 
 	results, err := a.coreApp.Search(ctx, sopts)

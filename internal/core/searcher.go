@@ -6,20 +6,34 @@ import (
 
 	storage "PaperHunter/db"
 	emb "PaperHunter/internal/embedding"
+	"PaperHunter/internal/ir"
 	"PaperHunter/internal/models"
 	"PaperHunter/pkg/logger"
 )
 
-// Searcher 本地检索器，支持语义搜索和关键词搜索
+// Searcher 本地检索器，支持语义搜索、关键词搜索和IR搜索
 type Searcher struct {
-	db       storage.PaperStorage
-	embedder emb.Service
+	db          storage.PaperStorage
+	embedder    emb.Service
+	irSearcher  *ir.IRSearcher  // IR搜索引擎
 }
 
 func NewSearcher(db storage.PaperStorage, embedder emb.Service) *Searcher {
+	// 创建IR搜索引擎的分词器
+	tokenizer, err := ir.NewTokenizer()
+	if err != nil {
+		logger.Warn("创建IR分词器失败: %v", err)
+	}
+
+	var irSearcher *ir.IRSearcher
+	if tokenizer != nil {
+		irSearcher = ir.NewIRSearcher(tokenizer)
+	}
+
 	return &Searcher{
-		db:       db,
-		embedder: embedder,
+		db:         db,
+		embedder:   embedder,
+		irSearcher: irSearcher,
 	}
 }
 
@@ -35,12 +49,21 @@ type SearchOptions struct {
 	TopK int
 	// 是否使用语义搜索（需要配置 embedder）
 	Semantic bool
+	// IR搜索模式
+	IR bool // 是否使用IR搜索
+	IRAlgorithm string // IR算法类型: "tfidf", "bm25", "all"
 }
 
 // Search 执行搜索
+// - IR搜索: 使用TF-IDF或BM25算法进行传统信息检索
 // - 语义搜索: 将 query/examples 转为向量，在数据库中查找相似论文
 // - 关键词搜索: 在标题和摘要中使用 SQL LIKE 查询
 func (s *Searcher) Search(ctx context.Context, opts SearchOptions) ([]*models.SimilarPaper, error) {
+	// IR搜索模式
+	if opts.IR {
+		return s.searchWithIR(ctx, opts)
+	}
+
 	// 关键词搜索模式
 	if !opts.Semantic {
 		if opts.Query == "" {
@@ -176,4 +199,129 @@ func (s *Searcher) ComputeMissingEmbeddings(ctx context.Context, batchSize int) 
 
 	logger.Info("向量计算完成: %d/%d 成功", count, len(papers))
 	return count, nil
+}
+
+// searchWithIR 使用传统IR算法进行搜索
+func (s *Searcher) searchWithIR(ctx context.Context, opts SearchOptions) ([]*models.SimilarPaper, error) {
+	if s.irSearcher == nil {
+		return nil, fmt.Errorf("IR搜索引擎未初始化")
+	}
+
+	if opts.Query == "" {
+		return nil, fmt.Errorf("IR搜索需要提供查询文本")
+	}
+
+	// 如果索引为空，需要构建索引
+	if s.irSearcher.IsEmpty() {
+		logger.Info("IR索引为空，正在从数据库构建索引...")
+		papers, err := s.getAllPapersForIR(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("获取论文数据失败: %w", err)
+		}
+
+		if len(papers) == 0 {
+			return nil, fmt.Errorf("数据库中没有论文数据")
+		}
+
+		err = s.irSearcher.BuildIndex(papers)
+		if err != nil {
+			return nil, fmt.Errorf("构建IR索引失败: %w", err)
+		}
+
+		logger.Info("IR索引构建完成，包含 %d 篇论文", len(papers))
+	}
+
+	// 设置默认值
+	if opts.TopK <= 0 {
+		opts.TopK = 10
+	}
+
+	if opts.IRAlgorithm == "" {
+		opts.IRAlgorithm = "bm25"
+	}
+
+	// 执行搜索
+	var irResults []*ir.SearchResult
+	var err error
+
+	if opts.IRAlgorithm == "all" {
+		// 执行多算法搜索，用于对比
+		results, err := s.irSearcher.SearchMultiple(opts.Query, opts.TopK, []string{"tfidf", "bm25"})
+		if err != nil {
+			return nil, fmt.Errorf("IR搜索失败: %w", err)
+		}
+
+		// 使用BM25结果作为主要结果（实际应用中可以选择最好的结果）
+		if bm25Results, exists := results["bm25"]; exists {
+			irResults = bm25Results
+		} else {
+			irResults = make([]*ir.SearchResult, 0)
+		}
+	} else {
+		// 执行单一算法搜索
+		irOpts := ir.SearchOptions{
+			Query:     opts.Query,
+			TopK:      opts.TopK,
+			Algorithm: opts.IRAlgorithm,
+		}
+
+		irResults, err = s.irSearcher.Search(irOpts)
+		if err != nil {
+			return nil, fmt.Errorf("IR搜索失败: %w", err)
+		}
+	}
+
+	// 转换结果格式
+	similarPapers := make([]*models.SimilarPaper, 0, len(irResults))
+	for _, result := range irResults {
+		if result.Paper != nil {
+			similarPaper := &models.SimilarPaper{
+				Paper:      *result.Paper,
+				Similarity: float32(result.Score), // BM25/TF-IDF分数作为相似度
+			}
+			similarPapers = append(similarPapers, similarPaper)
+		}
+	}
+
+	logger.Info("IR搜索(%s)完成，返回 %d 篇相关论文", opts.IRAlgorithm, len(similarPapers))
+	return similarPapers, nil
+}
+
+// getAllPapersForIR 获取所有论文用于构建IR索引
+func (s *Searcher) getAllPapersForIR(ctx context.Context) ([]*models.Paper, error) {
+	// 设置一个较大的limit来获取所有论文
+	largeLimit := 10000
+
+	papers, err := s.db.GetPapersByConditions([]string{}, []interface{}{}, largeLimit)
+	if err != nil {
+		return nil, fmt.Errorf("从数据库获取论文失败: %w", err)
+	}
+
+	// GetPapersByConditions 已经返回了 []*models.Paper，所以直接使用
+	return papers, nil
+}
+
+// GetIRStats 获取IR搜索引擎的统计信息
+func (s *Searcher) GetIRStats() map[string]interface{} {
+	if s.irSearcher == nil {
+		return map[string]interface{}{
+			"initialized": false,
+			"message":     "IR搜索引擎未初始化",
+		}
+	}
+
+	stats := s.irSearcher.GetIndexStats()
+	stats["initialized"] = true
+	return stats
+}
+
+// SetBM25Parameters 设置BM25参数
+func (s *Searcher) SetBM25Parameters(k1, b float64) error {
+	if s.irSearcher == nil {
+		return fmt.Errorf("IR搜索引擎未初始化")
+	}
+
+	s.irSearcher.SetBM25Parameters(k1, b)
+	logger.Info("BM25参数已更新: k1=%.2f, b=%.2f", k1, b)
+	return nil
 }

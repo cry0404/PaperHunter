@@ -221,6 +221,12 @@ func (a *App) GetPapers(ctx context.Context, page, pageSize int, conditions []st
 func (a *App) ExportPapers(ctx context.Context, format string, outputPath string, conditions []string, params []interface{}, limit int) error {
 	logger.Info("开始导出论文: 格式=%s, 输出=%s", format, outputPath)
 
+	// 规范化输出路径，支持相对路径与 ~，并确保父目录存在
+	normalizedPath, err := normalizeOutputPath(outputPath)
+	if err != nil {
+		return fmt.Errorf("处理输出路径失败: %w", err)
+	}
+
 	papers, err := a.db.GetPapersByConditions(conditions, params, limit)
 	if err != nil {
 		return fmt.Errorf("查询论文失败: %w", err)
@@ -242,12 +248,40 @@ func (a *App) ExportPapers(ctx context.Context, format string, outputPath string
 		return fmt.Errorf("不支持的导出格式: %s", format)
 	}
 
-	if err := exp.Export(papers, outputPath); err != nil {
+	if err := exp.Export(papers, normalizedPath); err != nil {
 		return fmt.Errorf("导出失败: %w", err)
 	}
 
-	logger.Info("导出成功: %d 篇论文 -> %s", len(papers), outputPath)
+	logger.Info("导出成功: %d 篇论文 -> %s", len(papers), normalizedPath)
 	return nil
+}
+
+// normalizeOutputPath 负责展开 ~、转为绝对路径并创建父目录
+func normalizeOutputPath(outputPath string) (string, error) {
+	if strings.HasPrefix(outputPath, "~") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("获取用户目录失败: %w", err)
+		}
+		outputPath = filepath.Join(homeDir, strings.TrimPrefix(outputPath, "~"))
+	}
+
+	if !filepath.IsAbs(outputPath) {
+		absPath, err := filepath.Abs(outputPath)
+		if err != nil {
+			return "", fmt.Errorf("解析输出路径失败: %w", err)
+		}
+		outputPath = absPath
+	}
+
+	dir := filepath.Dir(outputPath)
+	if dir != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", fmt.Errorf("创建输出目录失败: %w", err)
+		}
+	}
+
+	return outputPath, nil
 }
 
 func (a *App) ExportToZotero(ctx context.Context, collectionKey string, conditions []string, params []interface{}, limit int) error {

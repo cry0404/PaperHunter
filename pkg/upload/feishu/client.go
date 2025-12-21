@@ -179,7 +179,7 @@ func (c *Client) createBitable(fileName, parentFolderToken, tenantAccessToken st
 	url := ""
 	if resp.Data.App.Url != nil {
 		url = *resp.Data.App.Url
-		fmt.Println("当前多维表格的 url 是，请妥善存储（我目前没有找到别的能获取自建应用的云文档 url 的方法): ", url)
+		//fmt.Println("当前多维表格的 url 是，请妥善存储（我目前没有找到别的能获取自建应用的云文档 url 的方法): ", url)
 	}
 	return *appToken, url, nil
 }

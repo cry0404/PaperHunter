@@ -10,7 +10,7 @@ import (
 	"PaperHunter/internal/models"
 )
 
-// CSVExporter CSV 格式导出器
+
 type CSVExporter struct{}
 
 func NewCSVExporter() *CSVExporter {

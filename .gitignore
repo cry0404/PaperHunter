@@ -18,5 +18,5 @@ docs/
 .claude/
 cmd/
 practice/
-
+internal/ir/*.md
 agent/

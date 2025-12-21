@@ -47,7 +47,8 @@ const PapersView: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateUntil, setDateUntil] = useState('');
   const [topK, setTopK] = useState<number>(100);
-  const [semantic, setSemantic] = useState<boolean>(true);
+  const [searchMode, setSearchMode] = useState<'semantic' | 'ir' | 'keyword'>('semantic');
+  const [irAlgorithm, setIrAlgorithm] = useState<'bm25' | 'tfidf'>('bm25');
   const [examplesText, setExamplesText] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv'|'json'|'zotero'|'feishu'>('csv');
@@ -88,14 +89,16 @@ const PapersView: React.FC = () => {
       const resp = await SearchWithOptions({
         Query: searchQuery,
         Examples: examples,
-        Semantic: semantic,
+        Semantic: searchMode === 'semantic',
         TopK: topK,
         Limit: 0,
         Source: sourceFilter === 'all' ? '' : sourceFilter,
         From: dateFrom,
         Until: dateUntil,
         ComputeEmbed: false,
-        EmbedBatch: 100
+        EmbedBatch: 100,
+        IR: searchMode === 'ir',
+        IRAlgorithm: irAlgorithm
       } as any);
 
       // resp 是 JSON 字符串，解析为 SimilarPaper[]
@@ -602,11 +605,34 @@ const PapersView: React.FC = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium mb-2 block">TopK</Label>
-                  <Input type="number" value={topK} onChange={(e)=>setTopK(parseInt(e.target.value)||100)} />
-                  <label className="flex items-center gap-2 text-xs mt-2">
-                    <input type="checkbox" checked={semantic} onChange={(e)=>setSemantic(e.target.checked)} />
-                    Semantic
-                  </label>
+                  <Input type="number" value={topK} onChange={(e)=>setTopK(parseInt(e.target.value)||100)} className="mb-2" />
+                  
+                  <Label className="text-sm font-medium mb-1 block">Mode</Label>
+                  <Select value={searchMode} onValueChange={(v: any) => setSearchMode(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semantic">Semantic (Embedding)</SelectItem>
+                      <SelectItem value="ir">IR (Classic)</SelectItem>
+                      <SelectItem value="keyword">Keyword (SQL Like)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {searchMode === 'ir' && (
+                    <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                      <Label className="text-xs font-medium mb-1 block text-muted-foreground">Algorithm</Label>
+                      <Select value={irAlgorithm} onValueChange={(v: any) => setIrAlgorithm(v)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bm25">BM25</SelectItem>
+                          <SelectItem value="tfidf">TF-IDF</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
 
